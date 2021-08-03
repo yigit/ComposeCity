@@ -8,8 +8,9 @@ class CitySnapshot(
     val blackboard: Blackboard = BlackboardImpl()
     val grid: Grid<TileSnapshot>
     val cars: List<CarSnapshot>
-    val passangers: List<PassangerSnapshot>
-    val hasPassanger = city.passangers.value.isNotEmpty()
+    val availablePassengers: List<PassangerSnapshot>
+    val hasAvailablePassengers
+        get() = availablePassengers.isNotEmpty()
     init {
         // this is super inefficient but we don't care, for now...
         // we can make this mutable, track changes in the city and update efficiently, easily.
@@ -26,20 +27,34 @@ class CitySnapshot(
             unitSize = CityMap.TILE_SIZE,
             data = gridData
         )
-        passangers = city.passangers.value.map { passanger ->
-            val tile = grid.findClosest(
-                passanger.pos
-            )
-            val passangerSnapshot = PassangerSnapshot(tile)
-            tile._passangers.add(passangerSnapshot)
-            passangerSnapshot
-        }
+
         cars = city.cars.value.map { car ->
-            val carSnapshot = CarSnapshot(car)
+            val carSnapshot = CarSnapshot(
+                car = car,
+                passenger = car.passenger?.let {
+                    PassangerSnapshot(
+                        pos = it.pos.value,
+                        target = grid.findClosest(it.target.center)
+                    )
+                }
+            )
             grid.findClosest(
                 car.pos.value
             )._cars.add(carSnapshot)
             carSnapshot
+        }
+        availablePassengers = city.passangers.value.mapNotNull {
+            val car = it.car.value
+            if (car == null) {
+                PassangerSnapshot(
+                    pos = it.pos.value,
+                    target = grid.findClosest(it.pos.value)
+                ).also {
+                    grid.findClosest(it.pos)._passangers.add(it)
+                }
+            } else {
+                null
+            }
         }
     }
 
@@ -65,11 +80,13 @@ class CitySnapshot(
 
     class CarSnapshot(
         internal val car: Car,
-        val pos: Pos = car.pos.value
+        val pos: Pos = car.pos.value,
+        val passenger: PassangerSnapshot? = null
     )
 
     class PassangerSnapshot(
-        val tile: TileSnapshot
+        val pos: Pos,
+        val target: TileSnapshot
     )
 
     fun findPath(

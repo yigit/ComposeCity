@@ -194,8 +194,9 @@ fun CityMapUI(
 @Composable
 fun PassangerUI(
     cityMap: CityMap,
-    passanger: Passanger
+    passenger: Passenger
 ) {
+    val pos by passenger.pos.collectAsState()
     Image(
         bitmap = ImageCache.loadResource("passenger.png"),
         colorFilter = ColorFilter.tint(
@@ -204,8 +205,8 @@ fun PassangerUI(
         contentDescription = "passenger",
         modifier = Modifier.absoluteOffset(
             // TODO food size
-            x = (passanger.pos.x * SCALE).dp - PASSENGER_SIZE_DP,
-            y = (passanger.pos.y * SCALE).dp - PASSENGER_SIZE_DP
+            x = (pos.x * SCALE).dp - PASSENGER_SIZE_DP,
+            y = (pos.y * SCALE).dp - PASSENGER_SIZE_DP
         ),
     )
 }

@@ -91,7 +91,7 @@ class AddPassangerEvent: Event {
         }
         if (roadTiles.isEmpty()) return
         val passengersWithTiles = city.passangers.value.map {
-            city.map.tiles.findClosest(it.pos)
+            city.map.tiles.findClosest(it.pos.value)
         }
         repeat(100) {
             val tile = roadTiles[gameLoop.rand.nextInt(roadTiles.size)]
@@ -100,7 +100,7 @@ class AddPassangerEvent: Event {
                 val target = businessTiles.get(
                     gameLoop.rand.nextInt(businessTiles.size)
                 )
-                city.addPassanger(Passanger(pos = tile.center, target = target))
+                city.addPassanger(Passenger(pos = tile.center, target = target))
                 return
             }
         }
@@ -146,12 +146,14 @@ class GameLoop {
                 cars.forEach {
                     it.doGameLoop(city, delta)
                 }
-                val collectedPassengers = city.passangers.value.filter { passanger ->
-                    cars.any { car ->
-                        car.pos.value.dist(passanger.pos) < Car.CAR_SIZE / 2
-                    }
+                passengers.forEach {
+                    it.doGameLoop(city, delta)
                 }
-                collectedPassengers.forEach(city::removePassanger)
+                pickUpPassengers(cars, city, passengers)
+                val arrivedPassengers = passengers.filter {
+                    it.target.center.dist(it.pos.value) < CityMap.TILE_SIZE / 2
+                }
+                arrivedPassengers.forEach(city::removePassanger)
             }
         }
         aiScope.launch {
@@ -161,6 +163,38 @@ class GameLoop {
                 val snapshot = CitySnapshot(cityValue)
                 val event = CarAILoop().doAILoop(snapshot)
                 addEvent(event)
+            }
+        }
+    }
+
+    private fun pickUp(
+        passenger: Passenger,
+        car: Car?
+    ) {
+        if (car == null) return
+        car.passenger = passenger
+        passenger.setCar(car)
+    }
+
+    private fun pickUpPassengers(
+        cars: List<Car>,
+        city: City,
+        passengers: List<Passenger>
+    ) {
+        val carTiles = cars.filter { it.passenger == null }.groupBy {
+            city.map.tiles.findClosest(it.pos.value)
+        }
+        val passengerTiles = passengers.filter { it.car.value == null }.groupBy {
+            city.map.tiles.findClosest(it.pos.value)
+        }
+        carTiles.entries.forEach { (tile, cars) ->
+            val freePassengers = passengerTiles[tile]
+            if (freePassengers != null) {
+                freePassengers.forEachIndexed { index, passanger ->
+                    pickUp(
+                        passanger, cars.getOrNull(index)
+                    )
+                }
             }
         }
     }

@@ -9,13 +9,13 @@ class CarAILoop {
         citySnapshot: CitySnapshot
     ): Event {
         val cars = citySnapshot.cars
-        if (cars.isEmpty() || citySnapshot.hasPassanger == false) {
-            return CompositeEvent(
-                cars.map {
-                    ClearPathEvent(it.car)
-                }
-            )
-        }
+//        if (cars.isEmpty() || citySnapshot.hasAvailablePassengers == false) {
+//            return CompositeEvent(
+//                cars.map {
+//                    ClearPathEvent(it.car)
+//                }
+//            )
+//        }
         val queue = FairSharedQueue<CitySnapshot.TileSnapshot, List<CitySnapshot.TileSnapshot>?>()
         val deferredEvents = coroutineScope {
             cars.map {
@@ -38,20 +38,35 @@ class CarAILoop {
         queue: FairSharedQueue<CitySnapshot.TileSnapshot, List<CitySnapshot.TileSnapshot>?>
     ): Event {
         val closestTile = citySnapshot.grid.findClosest(pos)
-        val path = citySnapshot.findPathParallel(
-            queue = queue,
-            start = closestTile,
-            canVisit = {
-                it.content.canCarGo()
-            },
-            isTarget = {
-                val result = it.hasPassanger() && !citySnapshot.reservedTiles.contains(it)
-                if (result) {
-                    citySnapshot.reservedTiles = citySnapshot.reservedTiles + it
+        val passenger = this.passenger
+
+        val path = if(passenger != null) {
+            citySnapshot.findPathParallel(
+                queue =queue,
+                start = closestTile,
+                canVisit = {
+                    it.content.canCarGo() || it == passenger.target
+                },
+                isTarget = {
+                    it == passenger.target
                 }
-                result
-            }
-        ) ?: return ClearPathEvent(car = this.car)
+            )
+        } else {
+            citySnapshot.findPathParallel(
+                queue = queue,
+                start = closestTile,
+                canVisit = {
+                    it.content.canCarGo()
+                },
+                isTarget = {
+                    val result = it.hasPassanger() && !citySnapshot.reservedTiles.contains(it)
+                    if (result) {
+                        citySnapshot.reservedTiles = citySnapshot.reservedTiles + it
+                    }
+                    result
+                }
+            )
+        } ?: return ClearPathEvent(car = this.car)
         return SetPathEvent(
             car = this.car,
             path = path

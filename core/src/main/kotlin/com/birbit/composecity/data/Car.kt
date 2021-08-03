@@ -39,6 +39,7 @@ class Car(
     initialPos: Pos = Pos(0f, 0f)
 ) {
     var speedPerSecond = 100.0
+    var passenger: Passenger? = null
     var targetPath : Path? = null
 
     @OptIn(ExperimentalTime::class)
