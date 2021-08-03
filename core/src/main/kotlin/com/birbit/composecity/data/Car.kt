@@ -45,18 +45,19 @@ class Car(
     internal fun doGameLoop(city: City, delta: Duration) {
         val path = this.targetPath ?: return
         val radius = speedPerSecond * delta.div(Duration.seconds(1))
-        val targetTile = path.target(
+        val targetPos = path.target(
             pos = pos.value,
             radius = radius
         ) ?: return
-        if (targetTile.contentValue != TileContent.Road) {
+        val closestTile = city.map.tiles.findClosest(targetPos)
+        if (closestTile.contentValue != TileContent.Road && closestTile.contentValue != TileContent.Business) {
             targetPath = null
             return
         }
-        val diff = targetTile.center - pos.value
+        val diff = targetPos - pos.value
         _orientation.value = (degrees(atan2(y = diff.y, x = diff.x)) + 90).mod(360f)
         _pos.value = pos.value.findPos(
-            target =  targetTile.center,
+            target =  targetPos,
             distance = radius
         )
     }
@@ -91,10 +92,7 @@ class SetPathEvent(
         // TODO set this more cleverly because our car might've moved closer to the next path points if AI took a long
         //  time
         car.targetPath = Path(path.map {
-            city.map.tiles.get(
-                row = it.row,
-                col = it.col
-            )
+            it.center
         })
     }
 

@@ -27,6 +27,18 @@ class CompositeEvent(
 
 }
 
+class ToggleBusinessEvent(
+    private val tile: Tile
+) : Event {
+    override fun apply(gameLoop: GameLoop, city: City) {
+        if (tile.contentValue == TileContent.Business) {
+            tile.contentValue = TileContent.Grass
+        } else {
+            tile.contentValue = TileContent.Business
+        }
+    }
+}
+
 class ToggleTileEvent(
     private val tile: Tile
 ) : Event {
@@ -51,27 +63,6 @@ class AddCarEvent(
 //        newCar.targetPath = path
         city.addCar(newCar)
     }
-
-    private fun buildFakePath(city: City, tile: Tile): Path? {
-        val tiles = mutableListOf<Tile>()
-        var row = tile.row + 1
-        var col = tile.col + 1
-        do {
-            val next = city.map.tiles.maybeGet(
-                row = tile.row,
-                col = col)
-            if (next != null) {
-                tiles.add(next)
-            }
-            row ++
-            col ++
-        } while (next != null)
-        return if (tiles.isEmpty()) {
-            null
-        } else {
-            Path(tiles)
-        }
-    }
 }
 
 val SAVE_FILE_NAME = "saved.city"
@@ -91,15 +82,25 @@ class LoadEvent: Event {
 
 class AddPassangerEvent: Event {
     override fun apply(gameLoop: GameLoop, city: City) {
+        val businessTiles = city.map.tiles.data.filter {
+            it.contentValue == TileContent.Business
+        }
+        if(businessTiles.isEmpty()) return
         val roadTiles = city.map.tiles.data.filter {
             it.contentValue == TileContent.Road
         }
         if (roadTiles.isEmpty()) return
-        val existing = city.passangers.value
+        val passengersWithTiles = city.passangers.value.map {
+            city.map.tiles.findClosest(it.pos)
+        }
         repeat(100) {
             val tile = roadTiles[gameLoop.rand.nextInt(roadTiles.size)]
-            if (existing.none { it.tile == tile }) {
-                city.addPassanger(Passanger(tile = tile))
+            if (!passengersWithTiles.contains(tile)) {
+                // find business
+                val target = businessTiles.get(
+                    gameLoop.rand.nextInt(businessTiles.size)
+                )
+                city.addPassanger(Passanger(pos = tile.center, target = target))
                 return
             }
         }
@@ -141,12 +142,13 @@ class GameLoop {
             ) { delta ->
                 val city = cityValue
                 val cars = city.cars.value
+                val passengers = city.passangers.value
                 cars.forEach {
                     it.doGameLoop(city, delta)
                 }
                 val collectedPassengers = city.passangers.value.filter { passanger ->
                     cars.any { car ->
-                        car.pos.value.dist(passanger.tile.center) < Car.CAR_SIZE / 2
+                        car.pos.value.dist(passanger.pos) < Car.CAR_SIZE / 2
                     }
                 }
                 collectedPassengers.forEach(city::removePassanger)

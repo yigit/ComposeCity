@@ -28,7 +28,7 @@ class CitySnapshot(
         )
         passangers = city.passangers.value.map { passanger ->
             val tile = grid.findClosest(
-                passanger.tile.center
+                passanger.pos
             )
             val passangerSnapshot = PassangerSnapshot(tile)
             tile._passangers.add(passangerSnapshot)

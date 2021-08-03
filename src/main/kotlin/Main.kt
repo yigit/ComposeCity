@@ -21,7 +21,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 val SCALE = 1f
 val TILE_SIZE_DP = (CityMap.TILE_SIZE * SCALE).dp
 val CAR_SIZE_DP = (Car.CAR_SIZE * SCALE).dp
-
+val PASSENGER_SIZE_DP = TILE_SIZE_DP / 4
 fun main() = Window {
     val uiControls = UIControls()
 
@@ -38,11 +38,21 @@ fun main() = Window {
             }
         }
 
+        override fun onBusinessMenuClick() {
+            if (uiControls.modeValue == Mode.ADD_BUSINESS) {
+                uiControls.setMode(Mode.CHANGE_TILE)
+            } else {
+                uiControls.setMode(Mode.ADD_BUSINESS)
+            }
+        }
+
         override fun onTileClick(tile: Tile) {
             if (uiControls.modeValue == Mode.CHANGE_TILE) {
                 gameLoop.addEvent(ToggleTileEvent(tile))
             } else if (uiControls.modeValue == Mode.ADD_CAR && tile.contentValue == TileContent.Road) {
                 gameLoop.addEvent(AddCarEvent(tile))
+            } else if (uiControls.modeValue == Mode.ADD_BUSINESS) {
+                gameLoop.addEvent(ToggleBusinessEvent(tile))
             }
         }
 
@@ -75,6 +85,7 @@ fun main() = Window {
 
 interface ControlCallbacks {
     fun onCarMenuClick()
+    fun onBusinessMenuClick()
     fun onTileClick(tile: Tile)
     fun onSave()
     fun onLoad()
@@ -107,9 +118,25 @@ fun ControlsUI(
                     contentDescription = "toggle car",
                     colorFilter = ColorFilter.tint(
                         color = if (mode == Mode.ADD_CAR) {
-                            Color.Black
+                            MaterialTheme.colors.onPrimary
                         } else {
-                            Color.Gray
+                            MaterialTheme.colors.primaryVariant
+                        }
+                    )
+                )
+            }
+            Button(
+                onClick = callbacks::onBusinessMenuClick
+            ) {
+                Image(
+                    modifier = Modifier.size(TILE_SIZE_DP / 2),
+                    bitmap = ImageCache.loadResource("business.png"),
+                    contentDescription = "add business",
+                    colorFilter = ColorFilter.tint(
+                        color = if (mode == Mode.ADD_BUSINESS) {
+                            MaterialTheme.colors.onPrimary
+                        } else {
+                            MaterialTheme.colors.primaryVariant
                         }
                     )
                 )
@@ -159,23 +186,27 @@ fun CityMapUI(
             CarUI(cityMap, it)
         }
         currentFood.forEach {
-            FoodUI(cityMap, it)
+            PassangerUI(cityMap, it)
         }
     }
 }
 
 @Composable
-fun FoodUI(
+fun PassangerUI(
     cityMap: CityMap,
     passanger: Passanger
 ) {
-    Text(
+    Image(
+        bitmap = ImageCache.loadResource("passenger.png"),
+        colorFilter = ColorFilter.tint(
+            color = Color.Blue
+        ),
+        contentDescription = "passenger",
         modifier = Modifier.absoluteOffset(
             // TODO food size
-            x = (passanger.tile.center.x * SCALE).dp - CAR_SIZE_DP,
-            y = (passanger.tile.center.y * SCALE).dp - CAR_SIZE_DP
+            x = (passanger.pos.x * SCALE).dp - PASSENGER_SIZE_DP,
+            y = (passanger.pos.y * SCALE).dp - PASSENGER_SIZE_DP
         ),
-        text = "F"
     )
 }
 @Composable
@@ -213,14 +244,18 @@ fun TileUI(
             TileContent.Grass -> Box(
                 modifier = Modifier.background(Color.Green).fillMaxSize()
             )
-            is TileContent.Road -> Image(
+            TileContent.Business -> Image(
+                bitmap = ImageCache.loadResource("business.png"),
+                contentDescription = "business",
+            )
+            TileContent.Road -> Image(
                 bitmap = getTileBitmap(
                     cityMap = cityMap.tiles,
                     tile = tile
                 ),
-                contentDescription = null,
+                contentDescription = "road",
             )
-            is TileContent.OutOfBounds -> {
+            TileContent.OutOfBounds -> {
                 // nada
             }
         }

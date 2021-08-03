@@ -15,5 +15,6 @@ class UIControls {
 
 enum class Mode {
     CHANGE_TILE,
-    ADD_CAR
+    ADD_CAR,
+    ADD_BUSINESS
 }

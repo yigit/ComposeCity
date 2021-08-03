@@ -16,12 +16,7 @@ class SerializedCity(
         val width = bis.read()
         val height = bis.read()
         val tilesContent = (0 until width * height).map {
-            when(val value = bis.read()) {
-                1 -> TileContent.Road
-                2 -> TileContent.Grass
-                3 -> TileContent.OutOfBounds
-                else -> error("unexpected value $value")
-            }
+            TileContent.fromId(bis.read())
         }
         val map = CityMap(
             width = width,
@@ -40,11 +35,7 @@ class SerializedCity(
             bos.write(city.map.width)
             bos.write(city.map.height)
             city.map.tiles.data.forEach {
-                val value = when(it.contentValue) {
-                    TileContent.Road -> 1
-                    TileContent.Grass -> 2
-                    TileContent.OutOfBounds -> 3
-                }
+                val value = it.contentValue.id
                 bos.write(value)
             }
             return SerializedCity(bos.toByteArray())
