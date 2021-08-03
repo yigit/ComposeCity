@@ -60,33 +60,6 @@ class Car(
             distance = radius
         )
     }
-//
-//    internal fun doAILoop(citySnapshot: CitySnapshot): Event? {
-//        // find closest food
-//        if (!citySnapshot.hasFood) {
-//            return ClearPathEvent(car = this)
-//        }
-//        // this is dump, instead we need some sorth of prioritization here, or some collective AI?
-//        val reservedTiles = citySnapshot.blackboard.get(Blackboard.Key.RESERVED_FOOD) ?: emptyList()
-//
-//        val closestTile = citySnapshot.grid.findClosest(pos.value)
-//        val path = citySnapshot.findPath(
-//            start = closestTile,
-//            canVisit = {
-//                it.content.canCarGo()
-//            },
-//            isTarget = {
-//                it.content == CitySnapshot.Content.FOOD &&
-//                        !reservedTiles.contains(it)
-//            }
-//        ) ?: return ClearPathEvent(car = this)
-//        citySnapshot.blackboard.put(Blackboard.Key.RESERVED_FOOD,
-//        reservedTiles + path.last())
-//        return SetPathEvent(
-//            car = this,
-//            path = path
-//        )
-//    }
 
     private val _pos = MutableStateFlow<Pos>(initialPos)
     private val _orientation = MutableStateFlow<Float>(0f)

@@ -1,5 +1,5 @@
 package com.birbit.composecity.data
 
-class Food(
+class Passanger(
     val tile: Tile
 )

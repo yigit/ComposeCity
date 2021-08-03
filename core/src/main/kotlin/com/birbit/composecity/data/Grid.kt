@@ -69,7 +69,7 @@ interface Grid<T> {
         col = pos.col.coerceIn(0f, width * unitSize).div(unitSize).toInt()
     )
 
-    suspend fun findPath2(
+    suspend fun findPathParallel(
         queue: FairSharedQueue<T, List<T>?>,
         start: T,
         position : (T) -> Pos,

@@ -4,12 +4,12 @@ import com.birbit.composecity.data.*
 import com.birbit.composecity.data.snapshot.CitySnapshot
 import kotlinx.coroutines.*
 
-class FoodGrabbingAILoop {
+class CarAILoop {
     internal suspend fun doAILoop(
         citySnapshot: CitySnapshot
     ): Event {
         val cars = citySnapshot.cars
-        if (cars.isEmpty() || citySnapshot.hasFood == false) {
+        if (cars.isEmpty() || citySnapshot.hasPassanger == false) {
             return CompositeEvent(
                 cars.map {
                     ClearPathEvent(it.car)
@@ -38,16 +38,14 @@ class FoodGrabbingAILoop {
         queue: FairSharedQueue<CitySnapshot.TileSnapshot, List<CitySnapshot.TileSnapshot>?>
     ): Event {
         val closestTile = citySnapshot.grid.findClosest(pos)
-        // TODO need a way to run findPath in parallel but controlled such that each car runs their ai at the same time
-        //  in each step. this should lets us make the closest one to the food win each time
-        val path = citySnapshot.findPath2(
+        val path = citySnapshot.findPathParallel(
             queue = queue,
             start = closestTile,
             canVisit = {
                 it.content.canCarGo()
             },
             isTarget = {
-                val result = it.hasFood() && !citySnapshot.reservedTiles.contains(it)
+                val result = it.hasPassanger() && !citySnapshot.reservedTiles.contains(it)
                 if (result) {
                     citySnapshot.reservedTiles = citySnapshot.reservedTiles + it
                 }
@@ -61,10 +59,10 @@ class FoodGrabbingAILoop {
     }
 
     private var CitySnapshot.reservedTiles: List<CitySnapshot.TileSnapshot>
-        get() = RESERVED_FOOD.get(this.blackboard) ?: emptyList()
-        set(value) = RESERVED_FOOD.put(this.blackboard, value)
+        get() = RESERVED_PASSENGERS.get(this.blackboard) ?: emptyList()
+        set(value) = RESERVED_PASSENGERS.put(this.blackboard, value)
 
     companion object {
-        object RESERVED_FOOD : Blackboard.Key<List<CitySnapshot.TileSnapshot>>
+        object RESERVED_PASSENGERS : Blackboard.Key<List<CitySnapshot.TileSnapshot>>
     }
 }

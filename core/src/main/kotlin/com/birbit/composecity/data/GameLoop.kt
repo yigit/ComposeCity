@@ -1,6 +1,6 @@
 package com.birbit.composecity.data
 
-import com.birbit.composecity.ai.FoodGrabbingAILoop
+import com.birbit.composecity.ai.CarAILoop
 import com.birbit.composecity.data.serialization.SerializedCity
 import com.birbit.composecity.data.snapshot.CitySnapshot
 import kotlinx.coroutines.*
@@ -89,28 +89,21 @@ class LoadEvent: Event {
     }
 }
 
-class AddFoodEvent: Event {
+class AddPassangerEvent: Event {
     override fun apply(gameLoop: GameLoop, city: City) {
         val roadTiles = city.map.tiles.data.filter {
             it.contentValue == TileContent.Road
         }
         if (roadTiles.isEmpty()) return
-        val existing = city.foods.value
+        val existing = city.passangers.value
         repeat(100) {
             val tile = roadTiles[gameLoop.rand.nextInt(roadTiles.size)]
             if (existing.none { it.tile == tile }) {
-                city.addFood(Food(tile = tile))
+                city.addPassanger(Passanger(tile = tile))
                 return
             }
         }
     }
-}
-
-class RemoveFoodEvent(val food: Food): Event {
-    override fun apply(gameLoop: GameLoop, city: City) {
-        city.removeFood(food)
-    }
-
 }
 
 @OptIn(ExperimentalTime::class)
@@ -151,12 +144,12 @@ class GameLoop {
                 cars.forEach {
                     it.doGameLoop(city, delta)
                 }
-                val collectedFoods = city.foods.value.filter {  food ->
+                val collectedPassengers = city.passangers.value.filter { passanger ->
                     cars.any { car ->
-                        car.pos.value.dist(food.tile.center) < Car.CAR_SIZE / 2
+                        car.pos.value.dist(passanger.tile.center) < Car.CAR_SIZE / 2
                     }
                 }
-                collectedFoods.forEach(city::removeFood)
+                collectedPassengers.forEach(city::removePassanger)
             }
         }
         aiScope.launch {
@@ -164,7 +157,7 @@ class GameLoop {
                 period = Duration.milliseconds(250)
             ) { _ ->
                 val snapshot = CitySnapshot(cityValue)
-                val event = FoodGrabbingAILoop().doAILoop(snapshot)
+                val event = CarAILoop().doAILoop(snapshot)
                 addEvent(event)
             }
         }

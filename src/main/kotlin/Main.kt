@@ -1,6 +1,4 @@
 // Copyright 2000-2021 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license that can be found in the LICENSE file.
-import androidx.compose.animation.core.animate
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.desktop.Window
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -10,7 +8,6 @@ import androidx.compose.material.Button
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.runtime.*
-import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
@@ -19,11 +16,7 @@ import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.unit.dp
 import com.birbit.composecity.data.*
-import com.birbit.composecity.data.serialization.SerializedCity
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.forEach
-import java.io.File
 
 val SCALE = 1f
 val TILE_SIZE_DP = (CityMap.TILE_SIZE * SCALE).dp
@@ -63,8 +56,8 @@ fun main() = Window {
             gameLoop.addEvent(LoadEvent())
         }
 
-        override fun onAddFood() {
-            gameLoop.addEvent(AddFoodEvent())
+        override fun onAddPassanger() {
+            gameLoop.addEvent(AddPassangerEvent())
         }
     }
     MaterialTheme {
@@ -85,7 +78,7 @@ interface ControlCallbacks {
     fun onTileClick(tile: Tile)
     fun onSave()
     fun onLoad()
-    fun onAddFood()
+    fun onAddPassanger()
 }
 
 @Composable
@@ -122,9 +115,9 @@ fun ControlsUI(
                 )
             }
             Button(
-                onClick = callbacks::onAddFood
+                onClick = callbacks::onAddPassanger
             ) {
-                Text(text = "Add Food")
+                Text(text = "Add Passenger")
             }
             Button(
                 onClick = callbacks::onSave
@@ -147,7 +140,7 @@ fun CityMapUI(
 ) {
     val cityMap = city.map
     val currentCars by city.cars.collectAsState()
-    val currentFood by city.foods.collectAsState()
+    val currentFood by city.passangers.collectAsState()
     Box {
         Column {
             repeat(cityMap.height) { row ->
@@ -174,13 +167,13 @@ fun CityMapUI(
 @Composable
 fun FoodUI(
     cityMap: CityMap,
-    food: Food
+    passanger: Passanger
 ) {
     Text(
         modifier = Modifier.absoluteOffset(
             // TODO food size
-            x = (food.tile.center.x * SCALE).dp - CAR_SIZE_DP,
-            y = (food.tile.center.y * SCALE).dp - CAR_SIZE_DP
+            x = (passanger.tile.center.x * SCALE).dp - CAR_SIZE_DP,
+            y = (passanger.tile.center.y * SCALE).dp - CAR_SIZE_DP
         ),
         text = "F"
     )
