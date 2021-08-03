@@ -12,7 +12,7 @@ private fun now() = System.nanoTime().toDuration(DurationUnit.NANOSECONDS)
 @OptIn(ExperimentalTime::class)
 suspend fun timedLoop(
     period: Duration,
-    block : (delta: Duration) -> Unit
+    block : suspend (delta: Duration) -> Unit
 ) {
     var prev = now()
 

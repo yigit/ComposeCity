@@ -1,4 +1,6 @@
 // Copyright 2000-2021 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license that can be found in the LICENSE file.
+import androidx.compose.animation.core.animate
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.desktop.Window
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -6,6 +8,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.Button
 import androidx.compose.material.MaterialTheme
+import androidx.compose.material.Text
 import androidx.compose.runtime.*
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
@@ -16,9 +19,11 @@ import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.unit.dp
 import com.birbit.composecity.data.*
+import com.birbit.composecity.data.serialization.SerializedCity
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.forEach
+import java.io.File
 
 val SCALE = 1f
 val TILE_SIZE_DP = (CityMap.TILE_SIZE * SCALE).dp
@@ -26,11 +31,10 @@ val CAR_SIZE_DP = (Car.CAR_SIZE * SCALE).dp
 
 fun main() = Window {
     val uiControls = UIControls()
-    val city = City(
-        map = CityMap(width = 20, height = 20)
-    )
-    val gameLoop = GameLoop(city)
+
+    val gameLoop = GameLoop()
     gameLoop.start()
+    val city by gameLoop.city.collectAsState()
 
     val uiCallbacks = object : ControlCallbacks {
         override fun onCarMenuClick() {
@@ -48,10 +52,24 @@ fun main() = Window {
                 gameLoop.addEvent(AddCarEvent(tile))
             }
         }
+
+        override fun onSave() {
+            gameLoop.addEvent(
+                SaveEvent()
+            )
+        }
+
+        override fun onLoad() {
+            gameLoop.addEvent(LoadEvent())
+        }
+
+        override fun onAddFood() {
+            gameLoop.addEvent(AddFoodEvent())
+        }
     }
     MaterialTheme {
         Box {
-            CityMapUI(city.map, city.cars, uiCallbacks)
+            CityMapUI(city, uiCallbacks)
             ControlsUI(
                 controls = uiControls,
                 callbacks = uiCallbacks,
@@ -65,6 +83,9 @@ fun main() = Window {
 interface ControlCallbacks {
     fun onCarMenuClick()
     fun onTileClick(tile: Tile)
+    fun onSave()
+    fun onLoad()
+    fun onAddFood()
 }
 
 @Composable
@@ -100,18 +121,33 @@ fun ControlsUI(
                     )
                 )
             }
-
+            Button(
+                onClick = callbacks::onAddFood
+            ) {
+                Text(text = "Add Food")
+            }
+            Button(
+                onClick = callbacks::onSave
+            ) {
+                Text(text = "Save")
+            }
+            Button(
+                onClick = callbacks::onLoad
+            ) {
+                Text(text = "Load")
+            }
         }
     }
 }
 
 @Composable
 fun CityMapUI(
-    cityMap: CityMap,
-    cars: StateFlow<List<Car>>,
+    city: City,
     controlCallbacks: ControlCallbacks
 ) {
-    val currentCars by cars.collectAsState()
+    val cityMap = city.map
+    val currentCars by city.cars.collectAsState()
+    val currentFood by city.foods.collectAsState()
     Box {
         Column {
             repeat(cityMap.height) { row ->
@@ -129,9 +165,26 @@ fun CityMapUI(
         currentCars.forEach {
             CarUI(cityMap, it)
         }
+        currentFood.forEach {
+            FoodUI(cityMap, it)
+        }
     }
 }
 
+@Composable
+fun FoodUI(
+    cityMap: CityMap,
+    food: Food
+) {
+    Text(
+        modifier = Modifier.absoluteOffset(
+            // TODO food size
+            x = (food.tile.center.x * SCALE).dp - CAR_SIZE_DP,
+            y = (food.tile.center.y * SCALE).dp - CAR_SIZE_DP
+        ),
+        text = "F"
+    )
+}
 @Composable
 fun CarUI(
     cityMap: CityMap,
@@ -196,7 +249,9 @@ private fun getTileBitmap(
     cityMap: Grid<Tile>,
     tile: Tile
 ): ImageBitmap {
-    check(tile.contentValue == TileContent.Road)
+//    check(tile.contentValue == TileContent.Road) {
+//        "why are we getting bitmap for ${tile.contentValue}"
+//    }
     val north by (cityMap.maybeGet(
         tile.row - 1,
         tile.col

@@ -3,7 +3,7 @@ package com.birbit.composecity.data
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
-class Tile(
+data class Tile(
     val row:Int,
     val col:Int
 ) {
@@ -20,18 +20,21 @@ class Tile(
         }
 
     val center: Pos = createPos(
-        row = row * CityMap.TILE_SIZE + CityMap.TILE_SIZE / 2,
-        col = col * CityMap.TILE_SIZE + CityMap.TILE_SIZE / 2
+        row = row.toFloat() * CityMap.TILE_SIZE + CityMap.TILE_SIZE / 2,
+        col = col.toFloat() * CityMap.TILE_SIZE + CityMap.TILE_SIZE / 2
     )
 
     override fun toString() = "Tile[$row/$col]"
 }
 
 sealed class TileContent {
+    open fun canCarGo(): Boolean = false
+
     object Grass : TileContent() {
         override fun toString() = "Grass"
     }
     object Road : TileContent() {
+        override fun canCarGo() = true
         override fun toString() = "Road"
     }
     object OutOfBounds: TileContent() {
