@@ -45,6 +45,9 @@ sealed class TileContent(
     object Business: TileContent(4) {
         override fun toString() = "business"
     }
+    object TaxiStation : TileContent(5) {
+        override fun toString() = "taxi station"
+    }
     companion object {
         fun fromId(id:Int) = when(id) {
             1 -> Grass

@@ -36,7 +36,11 @@ class CitySnapshot(
                         pos = it.pos.value,
                         target = grid.findClosest(it.target.center)
                     )
-                }
+                },
+                taxiStation = grid.get(
+                    row = car.taxiStation.row,
+                    col = car.taxiStation.col
+                )
             )
             grid.findClosest(
                 car.pos.value
@@ -81,7 +85,8 @@ class CitySnapshot(
     class CarSnapshot(
         internal val car: Car,
         val pos: Pos = car.pos.value,
-        val passenger: PassangerSnapshot? = null
+        val passenger: PassangerSnapshot? = null,
+        val taxiStation: TileSnapshot
     )
 
     class PassangerSnapshot(

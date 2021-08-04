@@ -31,19 +31,15 @@ fun main() = Window {
 
     val uiCallbacks = object : ControlCallbacks {
         override fun onCarMenuClick() {
-            if (uiControls.modeValue == Mode.ADD_CAR) {
-                uiControls.setMode(Mode.CHANGE_TILE)
-            } else {
-                uiControls.setMode(Mode.ADD_CAR)
-            }
+            uiControls.toggleMode(Mode.ADD_CAR)
+        }
+
+        override fun onTaxiMenuClick() {
+            uiControls.toggleMode(Mode.ADD_TAXI_STATION)
         }
 
         override fun onBusinessMenuClick() {
-            if (uiControls.modeValue == Mode.ADD_BUSINESS) {
-                uiControls.setMode(Mode.CHANGE_TILE)
-            } else {
-                uiControls.setMode(Mode.ADD_BUSINESS)
-            }
+            uiControls.toggleMode(Mode.ADD_BUSINESS)
         }
 
         override fun onTileClick(tile: Tile) {
@@ -53,6 +49,8 @@ fun main() = Window {
                 gameLoop.addEvent(AddCarEvent(tile))
             } else if (uiControls.modeValue == Mode.ADD_BUSINESS) {
                 gameLoop.addEvent(ToggleBusinessEvent(tile))
+            } else if (uiControls.modeValue == Mode.ADD_TAXI_STATION) {
+                gameLoop.addEvent(AddTaxiStationEvent(tile))
             }
         }
 
@@ -85,6 +83,7 @@ fun main() = Window {
 
 interface ControlCallbacks {
     fun onCarMenuClick()
+    fun onTaxiMenuClick()
     fun onBusinessMenuClick()
     fun onTileClick(tile: Tile)
     fun onSave()
@@ -111,13 +110,13 @@ fun ControlsUI(
             )
         ) {
             Button(
-                onClick = callbacks::onCarMenuClick
+                onClick = callbacks::onTaxiMenuClick
             ) {
                 Image(
-                    bitmap = ImageCache.loadResource("car.png"),
-                    contentDescription = "toggle car",
+                    bitmap = ImageCache.loadResource("taxi-station.png"),
+                    contentDescription = "toggle taxi station",
                     colorFilter = ColorFilter.tint(
-                        color = if (mode == Mode.ADD_CAR) {
+                        color = if (mode == Mode.ADD_TAXI_STATION) {
                             MaterialTheme.colors.onPrimary
                         } else {
                             MaterialTheme.colors.primaryVariant
@@ -259,6 +258,10 @@ fun TileUI(
             TileContent.OutOfBounds -> {
                 // nada
             }
+            TileContent.TaxiStation -> Image(
+                bitmap = ImageCache.loadResource("taxi-station.png"),
+                contentDescription = "taxi station"
+            )
         }
 
     }

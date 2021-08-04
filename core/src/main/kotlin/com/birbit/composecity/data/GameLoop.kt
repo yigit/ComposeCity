@@ -45,7 +45,7 @@ class ToggleTileEvent(
     override fun apply(gameLoop: GameLoop, city: City) {
         if (tile.contentValue == TileContent.Grass) {
             tile.contentValue = TileContent.Road
-        } else {
+        } else if (tile.contentValue == TileContent.Road) {
             tile.contentValue = TileContent.Grass
         }
     }
@@ -56,11 +56,25 @@ class AddCarEvent(
 ) : Event {
     override fun apply(gameLoop: GameLoop, city: City) {
         val newCar = Car(
-            initialPos = tile.center
+            initialPos = tile.center,
+            taxiStation = tile
         )
-        // build a path
-//        val path = buildFakePath(city, tile)
-//        newCar.targetPath = path
+        city.addCar(newCar)
+    }
+}
+
+class AddTaxiStationEvent(
+    private val tile: Tile
+): Event {
+    override fun apply(gameLoop: GameLoop, city: City) {
+        if (tile.contentValue != TileContent.Grass) {
+            return
+        }
+        tile.contentValue = TileContent.TaxiStation
+        val newCar = Car(
+            initialPos = tile.center,
+            taxiStation = tile
+        )
         city.addCar(newCar)
     }
 }

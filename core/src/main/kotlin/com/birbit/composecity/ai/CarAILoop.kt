@@ -9,26 +9,23 @@ class CarAILoop {
         citySnapshot: CitySnapshot
     ): Event {
         val cars = citySnapshot.cars
-//        if (cars.isEmpty() || citySnapshot.hasAvailablePassengers == false) {
-//            return CompositeEvent(
-//                cars.map {
-//                    ClearPathEvent(it.car)
-//                }
-//            )
-//        }
         val queue = FairSharedQueue<CitySnapshot.TileSnapshot, List<CitySnapshot.TileSnapshot>?>()
-        val deferredEvents = coroutineScope {
-            cars.map {
-                async {
-                    it.doAILoop(citySnapshot, queue)
+        val events = coroutineScope {
+            val deferredEvents = cars.map {
+                    async {
+                        it.doAILoop(citySnapshot, queue)
+                    }
                 }
-            }.also {
-                // TODO relying on yield to ensure all asyncs suspended is ugly.
-                yield()
-                queue.execute()
+            val keepRunning = CompletableDeferred<Unit>()
+            val pump = async {
+                queue.execute(keepRunning)
             }
+            val events = deferredEvents.awaitAll()
+            keepRunning.complete(Unit)
+            pump.await()
+            events
         }
-        val events = deferredEvents.awaitAll()
+
 
         return CompositeEvent(events)
     }
@@ -40,7 +37,7 @@ class CarAILoop {
         val closestTile = citySnapshot.grid.findClosest(pos)
         val passenger = this.passenger
 
-        val path = if(passenger != null) {
+        var path = if(passenger != null) {
             citySnapshot.findPathParallel(
                 queue =queue,
                 start = closestTile,
@@ -66,11 +63,26 @@ class CarAILoop {
                     result
                 }
             )
-        } ?: return ClearPathEvent(car = this.car)
-        return SetPathEvent(
-            car = this.car,
-            path = path
-        )
+        }
+        if (path == null && closestTile != taxiStation) {
+            // go back to the taxi station
+            path = citySnapshot.findPathParallel(
+                queue = queue,
+                start = closestTile,
+                canVisit = {
+                    it.content.canCarGo() || it == taxiStation || it == closestTile
+                },
+                isTarget = {
+                    it == taxiStation
+                }
+            )
+        }
+        return path?.let {
+            SetPathEvent(
+                car = this.car,
+                path = it
+            )
+        } ?: ClearPathEvent(car)
     }
 
     private var CitySnapshot.reservedTiles: List<CitySnapshot.TileSnapshot>

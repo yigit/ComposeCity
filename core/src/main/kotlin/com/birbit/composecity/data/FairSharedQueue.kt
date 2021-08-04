@@ -2,10 +2,10 @@ package com.birbit.composecity.data
 
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.yield
 
 class FairSharedQueue<T, R> {
     private val queue = ArrayDeque<Entry>()
-    private val agents = mutableListOf<Agent>()
     suspend fun register(
         initialData: T,
         doLoop: (SharedQueueScope<T, R>, data: T) -> Unit
@@ -13,18 +13,24 @@ class FairSharedQueue<T, R> {
         val agent = Agent(
             doLoop = doLoop
         )
-        agents.add(agent)
         enqueue(agent, initialData)
         return agent.result.await()
     }
 
-    suspend fun execute() {
-        while (queue.isNotEmpty()) {
-            val entry = queue.removeFirst()
-            entry.agent.doEntry(entry.data)
-        }
-        agents.forEach {
-            it.forceEndIfNecessary()
+    suspend fun execute(
+        until: Deferred<Unit>
+    ) {
+        while (until.isActive) {
+            val agents = mutableSetOf<Agent>()
+            while (queue.isNotEmpty()) {
+                val entry = queue.removeFirst()
+                agents.add(entry.agent)
+                entry.agent.doEntry(entry.data)
+            }
+            agents.forEach {
+                it.forceEndIfNecessary()
+            }
+            yield()
         }
     }
 

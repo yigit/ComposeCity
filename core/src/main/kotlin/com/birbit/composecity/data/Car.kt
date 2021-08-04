@@ -36,7 +36,8 @@ fun Pos.findPos(
     return result
 }
 class Car(
-    initialPos: Pos = Pos(0f, 0f)
+    initialPos: Pos = Pos(0f, 0f),
+    val taxiStation: Tile
 ) {
     var speedPerSecond = 100.0
     var passenger: Passenger? = null
@@ -51,7 +52,8 @@ class Car(
             radius = radius
         ) ?: return
         val closestTile = city.map.tiles.findClosest(targetPos)
-        if (closestTile.contentValue != TileContent.Road && closestTile.contentValue != TileContent.Business) {
+        if (closestTile.contentValue != TileContent.Road && closestTile.contentValue != TileContent.Business &&
+                closestTile != taxiStation) {
             targetPath = null
             return
         }

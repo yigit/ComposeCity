@@ -11,10 +11,18 @@ class UIControls {
     fun setMode(mode: Mode) {
         _mode.value = mode
     }
+    fun toggleMode(mode: Mode) {
+        if (_mode.value == mode) {
+            _mode.value = Mode.CHANGE_TILE
+        } else {
+            _mode.value = mode
+        }
+    }
 }
 
 enum class Mode {
     CHANGE_TILE,
     ADD_CAR,
-    ADD_BUSINESS
+    ADD_BUSINESS,
+    ADD_TAXI_STATION
 }
