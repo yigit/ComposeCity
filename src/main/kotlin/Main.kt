@@ -1,18 +1,14 @@
 import androidx.compose.desktop.DesktopMaterialTheme
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
-import androidx.compose.ui.window.singleWindowApplication
 import com.birbit.composecity.data.*
 import com.birbit.composecity.data.serialization.LoadSave
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,14 +16,8 @@ import java.io.File
 import kotlin.time.Duration
 import kotlin.time.ExperimentalTime
 
-private enum class CurrentScreen {
-    MENU,
-    GAME
-}
-
 @OptIn(ExperimentalTime::class)
 private class GameController {
-    val currentScreen = MutableStateFlow(CurrentScreen.MENU)
     val currentGame = MutableStateFlow<GameLoop?>(null)
 
     val mainMenuCallbacks = object : MainMenuCallbacks {
@@ -67,7 +57,6 @@ fun main() = application{
         title = "Compose City",
         state = windowState,
     ) {
-        val currentScreen by gameController.currentScreen.collectAsState()
         val gameLoop by gameController.currentGame.collectAsState()
         val game = gameLoop
         DesktopMaterialTheme {
