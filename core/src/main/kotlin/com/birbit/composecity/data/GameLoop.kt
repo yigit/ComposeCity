@@ -211,6 +211,7 @@ class GameLoop {
                     if (gameTime.gameSpeed.value == GameTime.GameSpeed.STOPPED) {
                         null
                     } else {
+                        // TODO we need to eventually make this snapshot incremental.
                         CitySnapshot(cityValue)
                     }
                 }

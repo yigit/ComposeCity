@@ -8,7 +8,6 @@ class Path(
         if (index >= positions.size) return null
         val target = positions[index]
         val distance = target.dist(pos)
-        println("distance: $distance")
         if (distance <= CLOSE_ENOUGH) {
             index ++
             return positions[index - 1]
