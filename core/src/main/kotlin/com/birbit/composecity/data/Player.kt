@@ -47,6 +47,7 @@ class Player(
         private val TRIP_BASE_COST = 5
         private val FUEL_COST_BUCKET = 75
         const val COST_OF_TAXI_STATION = 750
+        const val COST_OF_ROAD = 5
     }
 
 }

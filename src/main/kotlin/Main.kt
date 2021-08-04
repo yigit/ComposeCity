@@ -4,9 +4,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.material.Button
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Text
+import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -101,77 +99,92 @@ fun ControlsUI(
 ) {
     val mode by controls.mode.collectAsState()
     val money by player.money.collectAsState()
-    Box(
-        modifier = modifier.fillMaxWidth(.8f).height(TILE_SIZE_DP)
+    BottomNavigation(
+        modifier = modifier
     ) {
-        Row(
-            modifier = Modifier.wrapContentSize(
-                align = Alignment.Center
-            ).background(
-                MaterialTheme.colors.background
-            )
-        ) {
-            Button(
-                onClick = callbacks::onTaxiMenuClick
-            ) {
-                Image(
-                    bitmap = ImageCache.loadResource("taxi-station.png"),
-                    contentDescription = "toggle taxi station",
-                    colorFilter = ColorFilter.tint(
-                        color = if (mode == Mode.ADD_TAXI_STATION) {
-                            MaterialTheme.colors.onPrimary
-                        } else {
-                            MaterialTheme.colors.primaryVariant
-                        }
-                    )
-                )
+        BottomNavigationItem(
+            selected = false,
+            onClick = {},
+            enabled = false,
+            alwaysShowLabel = true,
+            icon = {
+                Text("${money}")
+            },
+            label = {
+                Text("$$$$")
             }
-            Button(
-                onClick = callbacks::onBusinessMenuClick
-            ) {
-                Image(
-                    modifier = Modifier.size(TILE_SIZE_DP / 2),
+        )
+        BottomNavigationItem(
+            selected = mode == Mode.ADD_TAXI_STATION,
+            onClick = callbacks::onTaxiMenuClick,
+            alwaysShowLabel = false,
+            icon = {
+                Icon(
+                    bitmap = ImageCache.loadResource("taxi-station.png"),
+                    contentDescription = "add taxi",
+                    modifier = Modifier.fillMaxSize(.5f)
+                )
+            },
+            enabled = money > Player.COST_OF_TAXI_STATION,
+            label = {
+                Text("add taxi station")
+            }
+        )
+        BottomNavigationItem(
+            selected = mode == Mode.ADD_BUSINESS,
+            onClick = callbacks::onBusinessMenuClick,
+            alwaysShowLabel = false,
+            icon = {
+                Icon(
                     bitmap = ImageCache.loadResource("business.png"),
                     contentDescription = "add business",
-                    colorFilter = ColorFilter.tint(
-                        color = if (mode == Mode.ADD_BUSINESS) {
-                            MaterialTheme.colors.onPrimary
-                        } else {
-                            MaterialTheme.colors.primaryVariant
-                        }
-                    )
+                    modifier = Modifier.fillMaxSize(.5f)
                 )
+            },
+            enabled = true,
+            label = {
+                Text("add business")
             }
-            Button(
-                onClick = {}
-            ) {
-                Text(
-                    modifier = Modifier.defaultMinSize(64.dp),
-                    color = MaterialTheme.colors.onPrimary,
-                    text = "$${money}"
+        )
+        BottomNavigationItem(
+            selected = false,
+            onClick = callbacks::onAddPassanger,
+            alwaysShowLabel = true,
+            icon = {
+                Icon(
+                    bitmap = ImageCache.loadResource("passenger.png"),
+                    contentDescription = "add passenger",
+                    modifier = Modifier.fillMaxSize(.5f)
                 )
+            },
+            enabled = true,
+            label = {
+                Text("add passenger")
             }
+        )
+        BottomNavigationItem(
+            selected = false,
+            onClick = callbacks::onSave,
+            icon = {
+                   Text("SAVE")
+            },
+            alwaysShowLabel = false,
+            enabled = true,
+            label = {
+            }
+        )
+        BottomNavigationItem(
+            selected = false,
+            onClick = callbacks::onLoad,
+            alwaysShowLabel = false,
+            icon = {
+                Text("LOAD")
+            },
+            enabled = true,
+            label = {
 
-            Button(
-                onClick = callbacks::onAddPassanger
-            ) {
-                Text(
-                    color = MaterialTheme.colors.onPrimary,
-                    text = "Add passenger"
-                )
             }
-
-            Button(
-                onClick = callbacks::onSave
-            ) {
-                Text(text = "Save")
-            }
-            Button(
-                onClick = callbacks::onLoad
-            ) {
-                Text(text = "Load")
-            }
-        }
+        )
     }
 }
 

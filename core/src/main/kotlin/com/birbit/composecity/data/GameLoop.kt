@@ -44,7 +44,9 @@ class ToggleTileEvent(
 ) : Event {
     override fun apply(gameLoop: GameLoop, city: City) {
         if (tile.contentValue == TileContent.Grass) {
-            tile.contentValue = TileContent.Road
+            gameLoop.player.deductMoney(Player.COST_OF_ROAD) {
+                tile.contentValue = TileContent.Road
+            }
         } else if (tile.contentValue == TileContent.Road) {
             tile.contentValue = TileContent.Grass
         }
