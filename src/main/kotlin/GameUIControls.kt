@@ -1,8 +1,7 @@
-import com.birbit.composecity.data.City
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
-class UIControls {
+class GameUIControls {
     private val _mode = MutableStateFlow(Mode.CHANGE_TILE)
     val mode: StateFlow<Mode>
         get() = _mode

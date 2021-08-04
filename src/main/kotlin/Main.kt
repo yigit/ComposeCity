@@ -18,14 +18,19 @@ import kotlin.time.ExperimentalTime
 
 @OptIn(ExperimentalTime::class)
 private class GameController {
-    val currentGame = MutableStateFlow<GameLoop?>(null)
 
+    val currentGame = MutableStateFlow<GameLoop?>(null)
+    fun exitCurrentGame() {
+        val current = currentGame.value ?: return
+        currentGame.value = null
+        current.close()
+    }
     val mainMenuCallbacks = object : MainMenuCallbacks {
         override fun onNewGame() {
             val gameLoop = GameLoop(
                 player = Player(1000),
                 city = City(
-                    map = CityMap(width = 20, height = 20)
+                    map = CityMap(width = 30, height = 20)
                 ),
                 startDuration = Duration.ZERO
             )
@@ -72,7 +77,9 @@ fun main() = application{
                     }
                 }
                 else -> {
-                    GameUI(game)
+                    GameUI(game) {
+                        gameController.exitCurrentGame()
+                    }
                 }
             }
         }

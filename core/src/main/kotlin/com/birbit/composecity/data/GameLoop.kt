@@ -142,6 +142,11 @@ class GameLoop(
         start()
     }
 
+    fun close() {
+        gameScope.cancel()
+        aiScope.cancel()
+    }
+
     private fun start() {
         events.consumeAsFlow().onEach {
             // there is a possibility that we may not want certain events at the same time

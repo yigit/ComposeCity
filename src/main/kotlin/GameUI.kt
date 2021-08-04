@@ -1,7 +1,5 @@
 // Copyright 2000-2021 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license that can be found in the LICENSE file.
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.desktop.DesktopMaterialTheme
-import androidx.compose.desktop.Window
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -14,11 +12,7 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.text.toLowerCase
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.rememberWindowState
-import androidx.compose.ui.window.singleWindowApplication
 import com.birbit.composecity.GameTime
 import com.birbit.composecity.SetGameSpeedEvent
 import com.birbit.composecity.data.*
@@ -34,11 +28,14 @@ val CAR_SIZE_DP = (Car.CAR_SIZE * SCALE).dp
 val PASSENGER_SIZE_DP = TILE_SIZE_DP / 4
 
 @Composable
-fun GameUI(gameLoop: GameLoop) {
-    val uiControls = UIControls()
+fun GameUI(gameLoop: GameLoop, onExit: () -> Unit) {
+    val uiControls = GameUIControls()
     val city = gameLoop.city
 
     val uiCallbacks = object : ControlCallbacks {
+        override fun onExit() {
+            onExit()
+        }
         override fun onCarMenuClick() {
             uiControls.toggleMode(Mode.ADD_CAR)
         }
@@ -102,12 +99,13 @@ interface ControlCallbacks {
     fun onSave()
     fun onAddPassanger()
     fun onSetGameSpeed(speed: GameTime.GameSpeed)
+    fun onExit()
 }
 
 @OptIn(ExperimentalTime::class, androidx.compose.animation.ExperimentalAnimationApi::class)
 @Composable
 fun ControlsUI(
-    controls: UIControls,
+    controls: GameUIControls,
     gameTime: GameTime,
     callbacks: ControlCallbacks,
     player: Player,
@@ -147,7 +145,7 @@ fun ControlsUI(
                 showGameSpeeds = !showGameSpeeds
             },
             enabled = true,
-            alwaysShowLabel = true,
+            alwaysShowLabel = false,
             icon = {
                 Text(passedTime)
             },
@@ -235,6 +233,17 @@ fun ControlsUI(
             onClick = callbacks::onSave,
             icon = {
                 Text("SAVE")
+            },
+            alwaysShowLabel = false,
+            enabled = true,
+            label = {
+            }
+        )
+        BottomNavigationItem(
+            selected = false,
+            onClick = callbacks::onExit,
+            icon = {
+                Text("EXIT")
             },
             alwaysShowLabel = false,
             enabled = true,
