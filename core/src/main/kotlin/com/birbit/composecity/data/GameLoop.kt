@@ -2,6 +2,7 @@ package com.birbit.composecity.data
 
 import com.birbit.composecity.GameTime
 import com.birbit.composecity.ai.CarAILoop
+import com.birbit.composecity.ai.CityAILoop
 import com.birbit.composecity.data.serialization.LoadSave
 import com.birbit.composecity.data.snapshot.CitySnapshot
 import kotlinx.coroutines.*
@@ -27,6 +28,17 @@ class CompositeEvent(
         }
     }
 
+}
+
+// TODO need to be able to get result from this
+class CreateBusinessEvent(
+    private val tile: Tile
+) : Event {
+    override fun apply(gameLoop: GameLoop, city: City) {
+        if (tile.contentValue == TileContent.Grass) {
+            tile.contentValue = TileContent.Business
+        }
+    }
 }
 
 class ToggleBusinessEvent(
@@ -134,6 +146,8 @@ class GameLoop(
     private val events = Channel<Event>(
         capacity = Channel.UNLIMITED
     )
+    // TODO this needs to be saved
+    private val cityAILoop = CityAILoop()
     private val aiDispatcher = Executors.newSingleThreadExecutor().asCoroutineDispatcher()
     private val aiScope = CoroutineScope(aiDispatcher + Job())
     private val gameScope = CoroutineScope(Dispatchers.Main + Job())
@@ -194,12 +208,13 @@ class GameLoop(
                         null
                     } else {
                         // TODO we need to eventually make this snapshot incremental.
-                        CitySnapshot(city)
+                        CitySnapshot(this@GameLoop, city)
                     }
                 }
                 snapshot?.let {
-                    val event = CarAILoop().doAILoop(snapshot)
-                    addEvent(event)
+                    val carEvents = CarAILoop().doAILoop(snapshot)
+                    val businessEvents = cityAILoop.doAILoop(snapshot)
+                    addEvent(CompositeEvent(listOf(carEvents, businessEvents)))
                 }
 
             }

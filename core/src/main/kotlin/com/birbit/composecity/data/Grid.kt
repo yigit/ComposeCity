@@ -2,6 +2,7 @@ package com.birbit.composecity.data
 
 import kotlinx.coroutines.Deferred
 
+
 private data class Coordinates(
     val row:Int,
     val col:Int
@@ -54,7 +55,7 @@ private data class Coordinates(
     }
 
 }
-// TODO maybe have size here so that we can easily do closest?
+// TODO: It might make sense to add some utiltiy functions to grid to get things by type etc. maybe at a higher level
 interface Grid<T> {
     val width: Int
     val height: Int

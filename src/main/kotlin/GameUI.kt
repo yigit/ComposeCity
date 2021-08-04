@@ -54,7 +54,7 @@ fun GameUI(gameLoop: GameLoop, onExit: () -> Unit) {
             } else if (uiControls.modeValue == Mode.ADD_CAR && tile.contentValue == TileContent.Road) {
                 gameLoop.addEvent(AddCarEvent(tile))
             } else if (uiControls.modeValue == Mode.ADD_BUSINESS) {
-                gameLoop.addEvent(ToggleBusinessEvent(tile))
+                gameLoop.addEvent(CreateBusinessEvent(tile))
             } else if (uiControls.modeValue == Mode.ADD_TAXI_STATION) {
                 gameLoop.addEvent(AddTaxiStationEvent(tile))
             }

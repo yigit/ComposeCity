@@ -3,12 +3,14 @@ package com.birbit.composecity.data.snapshot
 import com.birbit.composecity.data.*
 
 class CitySnapshot(
+    gameLoop: GameLoop,
     city: City
 ) {
     val blackboard: Blackboard = BlackboardImpl()
     val grid: Grid<TileSnapshot>
     val cars: List<CarSnapshot>
     val availablePassengers: List<PassangerSnapshot>
+    val now = gameLoop.gameTime.now.value
     val hasAvailablePassengers
         get() = availablePassengers.isNotEmpty()
     init {
