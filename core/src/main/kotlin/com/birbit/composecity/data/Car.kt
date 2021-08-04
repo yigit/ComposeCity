@@ -32,6 +32,9 @@ fun Pos.findPos(
 ): Pos {
     val vector = target.minus(this)
     val available = minOf(distance, length(vector).toDouble())
+    if (available < 0.2) {
+        return this
+    }
     val normal = normalize(vector)
     return this + normal.times(available.toFloat())
 }
@@ -39,30 +42,36 @@ class Car(
     initialPos: Pos = Pos(0f, 0f),
     val taxiStation: Tile
 ) {
-    var speedPerSecond = 100.0
+    var speedPerMinute = 10.0
     var passenger: Passenger? = null
     var targetPath : Path? = null
 
     @OptIn(ExperimentalTime::class)
     internal fun doGameLoop(city: City, delta: Duration) {
         val path = this.targetPath ?: return
-        val radius = speedPerSecond * delta.div(Duration.seconds(1))
-        val targetPos = path.target(
-            pos = pos.value,
-            radius = radius
-        ) ?: return
-        val closestTile = city.map.tiles.findClosest(targetPos)
-        if (closestTile.contentValue != TileContent.Road && closestTile.contentValue != TileContent.Business &&
+        var remaining = speedPerMinute * delta.div(Duration.minutes(1))
+        do {
+            val targetPos = path.target(
+                pos = pos.value
+            ) ?: return
+            val closestTile = city.map.tiles.findClosest(targetPos)
+            if (closestTile.contentValue != TileContent.Road && closestTile.contentValue != TileContent.Business &&
                 closestTile != taxiStation) {
-            targetPath = null
-            return
-        }
-        val diff = targetPos - pos.value
-        _orientation.value = (degrees(atan2(y = diff.y, x = diff.x)) + 90).mod(360f)
-        _pos.value = pos.value.findPos(
-            target =  targetPos,
-            distance = radius
-        )
+                targetPath = null
+                return
+            }
+            val diff = targetPos - pos.value
+            _orientation.value = (degrees(atan2(y = diff.y, x = diff.x)) + 90).mod(360f)
+            val prevPosition = _pos.value
+            val newPos = pos.value.findPos(
+                target = targetPos,
+                distance = remaining
+            )
+            _pos.value = newPos
+            val consumedLength = newPos.dist(prevPosition)
+            remaining -= consumedLength
+        } while(remaining > 1)
+
     }
 
     private val _pos = MutableStateFlow<Pos>(initialPos)

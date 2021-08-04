@@ -13,8 +13,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.unit.dp
+import com.birbit.composecity.GameTime
+import com.birbit.composecity.SetGameSpeedEvent
 import com.birbit.composecity.data.*
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.map
+import java.text.DecimalFormat
+import kotlin.time.Duration
+import kotlin.time.ExperimentalTime
 
 val SCALE = 1f
 val TILE_SIZE_DP = (CityMap.TILE_SIZE * SCALE).dp
@@ -65,6 +71,10 @@ fun main() = Window {
         override fun onAddPassanger() {
             gameLoop.addEvent(AddPassangerEvent())
         }
+
+        override fun onSetGameSpeed(speed: GameTime.GameSpeed) {
+            gameLoop.addEvent(SetGameSpeedEvent(speed))
+        }
     }
     MaterialTheme {
         Box {
@@ -73,7 +83,8 @@ fun main() = Window {
                 controls = uiControls,
                 callbacks = uiCallbacks,
                 modifier = Modifier.align(Alignment.BottomCenter),
-                player = gameLoop.player
+                player = gameLoop.player,
+                gameTime = gameLoop.gameTime
             )
         }
 
@@ -88,17 +99,31 @@ interface ControlCallbacks {
     fun onSave()
     fun onLoad()
     fun onAddPassanger()
+    fun onSetGameSpeed(speed: GameTime.GameSpeed)
 }
 
+@OptIn(ExperimentalTime::class)
 @Composable
 fun ControlsUI(
     controls: UIControls,
+    gameTime: GameTime,
     callbacks: ControlCallbacks,
     player: Player,
     modifier: Modifier = Modifier
 ) {
     val mode by controls.mode.collectAsState()
     val money by player.money.collectAsState()
+    var showGameSpeeds by mutableStateOf(false)
+    val passedTime by gameTime.passedTIme
+        .map {
+            val days = it.inWholeDays + 1
+            val hours = it.inWholeHours % 24
+            val minutes = it.inWholeMinutes % 60
+            String.format("Day %d, %02d:%02d", days, hours.toInt(), minutes.toInt())
+        }
+        .collectAsState("00:00")
+    val gameSpeed by gameTime.gameSpeed.collectAsState()
+    // TODO navigation rail si not available, where is it?
     BottomNavigation(
         modifier = modifier
     ) {
@@ -108,12 +133,45 @@ fun ControlsUI(
             enabled = false,
             alwaysShowLabel = true,
             icon = {
-                Text("${money}")
+                Text("$money")
             },
             label = {
                 Text("$$$$")
             }
         )
+        BottomNavigationItem(
+            selected = false,
+            onClick = {
+                showGameSpeeds = !showGameSpeeds
+            },
+            enabled = true,
+            alwaysShowLabel = true,
+            icon = {
+                Text(passedTime, style = MaterialTheme.typography.subtitle1)
+            },
+            label = {
+
+            }
+        )
+        if (showGameSpeeds) {
+            GameTime.GameSpeed.values().forEach { speed ->
+                BottomNavigationItem(
+                    selected = gameSpeed == speed,
+                    onClick = {
+                        callbacks.onSetGameSpeed(speed)
+                    },
+                    enabled = speed != gameSpeed
+                    ,
+                    alwaysShowLabel = false,
+                    icon = {
+                        Text(speed.name) // TODO icons
+                    },
+                    label = {
+                        Text("*")
+                    }
+                )
+            }
+        }
         BottomNavigationItem(
             selected = mode == Mode.ADD_TAXI_STATION,
             onClick = callbacks::onTaxiMenuClick,
@@ -187,6 +245,9 @@ fun ControlsUI(
         )
     }
 }
+
+val timeFormat = DecimalFormat("$$")
+
 
 @Composable
 fun CityMapUI(

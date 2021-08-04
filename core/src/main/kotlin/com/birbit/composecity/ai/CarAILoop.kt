@@ -64,7 +64,8 @@ class CarAILoop {
                 }
             )
         }
-        if (path == null && closestTile != taxiStation) {
+        // TODO this close enough logic needs to live in more places
+        if (path == null && (closestTile != taxiStation || pos.dist(taxiStation.center) >= Path.CLOSE_ENOUGH)) {
             // go back to the taxi station
             path = citySnapshot.findPathParallel(
                 queue = queue,

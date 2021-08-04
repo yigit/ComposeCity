@@ -4,20 +4,23 @@ class Path(
     private val positions : List<Pos>
 ) {
     private var index = 0
-    fun target(pos: Pos, radius: Double): Pos? {
+    fun target(pos: Pos): Pos? {
         if (index >= positions.size) return null
         val target = positions[index]
         val distance = target.dist(pos)
-        if (distance <= radius) {
+        println("distance: $distance")
+        if (distance <= CLOSE_ENOUGH) {
             index ++
-            // can make it to it in this frame, pick second one if available
-            return if (index < positions.size) {
-                positions[index]
-            } else {
-                target
-            }
+            return positions[index - 1]
         }
         return target
     }
 
+    fun isFinished(): Boolean {
+        return index >= positions.size
+    }
+
+    companion object {
+        const val CLOSE_ENOUGH = 1f
+    }
 }

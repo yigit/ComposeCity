@@ -1,5 +1,6 @@
 package com.birbit.composecity.data
 
+import com.birbit.composecity.GameTime
 import com.birbit.composecity.ai.CarAILoop
 import com.birbit.composecity.data.serialization.SerializedCity
 import com.birbit.composecity.data.snapshot.CitySnapshot
@@ -129,6 +130,7 @@ class AddPassangerEvent: Event {
 @OptIn(ExperimentalTime::class)
 class GameLoop {
     val player = Player()
+    val gameTime = GameTime()
     internal val rand = Random(System.nanoTime())
     private val _city = MutableStateFlow(
         City(CityMap(width = 20, height = 20))
@@ -159,7 +161,11 @@ class GameLoop {
             timedLoop(
                 // well, this should actually sync w/ frame time, but we don't have frame time :) or maybe we do?
                 period = Duration.milliseconds(16)
-            ) { delta ->
+            ) { _ ->
+                if (gameTime.gameSpeed.value == GameTime.GameSpeed.STOPPED) {
+                    return@timedLoop
+                }
+                val delta = gameTime.gameTick()
                 val city = cityValue
                 val cars = city.cars.value
                 val passengers = city.passangers.value
@@ -183,6 +189,7 @@ class GameLoop {
             }
         }
         aiScope.launch {
+            // TODO this should use game time!!
             timedLoop(
                 period = Duration.milliseconds(250)
             ) { _ ->
