@@ -46,7 +46,7 @@ class ToggleTileEvent(
 ) : Event {
     override fun apply(gameLoop: GameLoop, city: City) {
         if (tile.contentValue == TileContent.Grass) {
-            gameLoop.player.value.deductMoney(Player.COST_OF_ROAD) {
+            gameLoop.player.deductMoney(Player.COST_OF_ROAD) {
                 tile.contentValue = TileContent.Road
             }
         } else if (tile.contentValue == TileContent.Road) {
@@ -75,7 +75,7 @@ class AddTaxiStationEvent(
         if (tile.contentValue != TileContent.Grass) {
             return
         }
-        gameLoop.player.value.deductMoney(Player.COST_OF_TAXI_STATION) {
+        gameLoop.player.deductMoney(Player.COST_OF_TAXI_STATION) {
             tile.contentValue = TileContent.TaxiStation
             val newCar = Car(
                 id = city.idGenerator.nextId(),
@@ -93,22 +93,6 @@ class SaveEvent : Event {
     override fun apply(gameLoop: GameLoop, city: City) {
         val loadSave = LoadSave.create(gameLoop)
         File(SAVE_FILE_NAME).writeText(loadSave.data)
-    }
-}
-
-class LoadEvent: Event {
-    override fun apply(gameLoop: GameLoop, city: City) {
-        File(SAVE_FILE_NAME).let {
-            if (it.exists()) {
-                LoadSave(it.readText(Charsets.UTF_8))
-            } else {
-                null
-            }
-        }?.let {
-            val (city, player, timeInSeconds) = it.create()
-            gameLoop.updateFrom(city, player, timeInSeconds)
-        }
-
     }
 }
 
@@ -139,26 +123,14 @@ class AddPassangerEvent: Event {
 
 @OptIn(ExperimentalTime::class)
 // TODO separate GAME from GameLoop
-class GameLoop {
-    private val _player = MutableStateFlow(Player(1000))
-    val player: StateFlow<Player>
-        get() = _player
-    val gameTime = GameTime()
+class GameLoop(
+    val player: Player,
+    startDuration: Duration,
+    val city: City
+) {
+    val gameTime = GameTime(startDuration)
     internal val rand = Random(System.nanoTime())
-    private val _city = MutableStateFlow(
-        City(CityMap(width = 20, height = 20))
-    )
-    val city: StateFlow<City>
-        get() = _city
 
-    val cityValue
-        get() = _city.value
-
-    internal fun updateFrom(city: City, player: Player, timeInSeconds: Duration) {
-        _city.value = city
-        _player.value = player
-        gameTime.setNow(timeInSeconds)
-    }
     private val events = Channel<Event>(
         capacity = Channel.UNLIMITED
     )
@@ -174,7 +146,7 @@ class GameLoop {
         events.consumeAsFlow().onEach {
             // there is a possibility that we may not want certain events at the same time
             // we can get some priority OR categorization (probably categorization)
-            it.apply(this, cityValue)
+            it.apply(this, city)
         }.launchIn(gameScope)
         gameScope.launch {
             timedLoop(
@@ -185,7 +157,7 @@ class GameLoop {
                     return@timedLoop
                 }
                 val delta = gameTime.gameTick()
-                val city = cityValue
+                val city = city
                 val cars = city.cars.value
                 val passengers = city.passengers.value
                 var distanceTraveledByCars = 0f
@@ -202,9 +174,9 @@ class GameLoop {
                 val arrivedPassengers = passengers.filter {
                     it.target.center.dist(it.pos.value) < CityMap.TILE_SIZE / 2
                 }
-                arrivedPassengers.forEach(player.value::onDeliveredPassenger)
+                arrivedPassengers.forEach(player::onDeliveredPassenger)
                 arrivedPassengers.forEach(city::removePassenger)
-                player.value.onDistanceTraveledByCars(distanceTraveledByCars)
+                player.onDistanceTraveledByCars(distanceTraveledByCars)
             }
         }
         aiScope.launch {
@@ -217,7 +189,7 @@ class GameLoop {
                         null
                     } else {
                         // TODO we need to eventually make this snapshot incremental.
-                        CitySnapshot(cityValue)
+                        CitySnapshot(city)
                     }
                 }
                 snapshot?.let {

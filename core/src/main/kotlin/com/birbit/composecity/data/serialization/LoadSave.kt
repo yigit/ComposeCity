@@ -7,6 +7,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import java.io.File
 import kotlin.time.Duration
 import kotlin.time.ExperimentalTime
 
@@ -130,10 +131,14 @@ class LoadSave(
         private fun GameTime.toSerialized() = SerializedGameTime(
             timeInSeconds = this.now.value.inWholeSeconds
         )
+        fun load(file: File): LoadSave? {
+            if (!file.exists()) return null
+            return LoadSave(file.readText(Charsets.UTF_8))
+        }
         fun create(gameLoop: GameLoop): LoadSave {
             val serialized = SerializedGame(
-                player = gameLoop.player.value.toSerialized(),
-                city = gameLoop.city.value.toSerialized(),
+                player = gameLoop.player.toSerialized(),
+                city = gameLoop.city.toSerialized(),
                 gameTime = gameLoop.gameTime.toSerialized()
             )
             val json = Json.encodeToString(serialized)

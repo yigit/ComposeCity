@@ -18,7 +18,9 @@ class SetGameSpeedEvent(
 }
 
 @OptIn(ExperimentalTime::class)
-class GameTime {
+class GameTime(
+    startTime: Duration = START_TIME
+) {
     private val _now = MutableStateFlow(START_TIME)
     val passedTIme = _now.map {
         it - START_TIME
