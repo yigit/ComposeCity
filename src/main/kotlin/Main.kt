@@ -19,7 +19,6 @@ import com.birbit.composecity.data.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
 import java.text.DecimalFormat
-import kotlin.time.Duration
 import kotlin.time.ExperimentalTime
 
 val SCALE = 1f
@@ -76,6 +75,7 @@ fun main() = Window {
             gameLoop.addEvent(SetGameSpeedEvent(speed))
         }
     }
+    val player by gameLoop.player.collectAsState()
     MaterialTheme {
         Box {
             CityMapUI(city, uiCallbacks)
@@ -83,7 +83,7 @@ fun main() = Window {
                 controls = uiControls,
                 callbacks = uiCallbacks,
                 modifier = Modifier.align(Alignment.BottomCenter),
-                player = gameLoop.player,
+                player = player,
                 gameTime = gameLoop.gameTime
             )
         }
@@ -256,7 +256,7 @@ fun CityMapUI(
 ) {
     val cityMap = city.map
     val currentCars by city.cars.collectAsState()
-    val currentFood by city.passangers.collectAsState()
+    val currentFood by city.passengers.collectAsState()
     Box {
         Column {
             repeat(cityMap.height) { row ->

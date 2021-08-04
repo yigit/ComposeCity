@@ -1,28 +1,40 @@
 package com.birbit.composecity.data
 
+import com.birbit.composecity.Id
+import com.birbit.composecity.IdGenerator
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
 class City(
-    val map: CityMap
+    val map: CityMap,
+    startId: Id = Id(0)
 ) {
+    internal val idGenerator: IdGenerator = IdGenerator(startId)
     private val _cars = MutableStateFlow<List<Car>>(emptyList())
-    private val _passangers = MutableStateFlow<List<Passenger>>(emptyList())
+    private val _passengers = MutableStateFlow<List<Passenger>>(emptyList())
     val cars: StateFlow<List<Car>>
         get() = _cars
-    val passangers: StateFlow<List<Passenger>>
-        get() = _passangers
+    val passengers: StateFlow<List<Passenger>>
+        get() = _passengers
 
     fun addCar(car: Car) {
         _cars.value = _cars.value + car
     }
 
-    fun addPassanger(passenger: Passenger) {
-        _passangers.value = _passangers.value + passenger
+    fun addPassenger(passenger: Passenger) {
+        _passengers.value = _passengers.value + passenger
     }
 
-    fun removePassanger(passenger: Passenger) {
-        _passangers.value = _passangers.value.filter { it != passenger }
+    fun associatePassengerWithCar(
+        passenger: Passenger,
+        car: Car
+    ) {
+        car.passenger = passenger
+        passenger.setCar(car)
+    }
+
+    fun removePassenger(passenger: Passenger) {
+        _passengers.value = _passengers.value.filter { it != passenger }
         passenger.car.value?.let {  car ->
             car.passenger = null
         }

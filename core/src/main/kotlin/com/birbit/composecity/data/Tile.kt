@@ -54,6 +54,7 @@ sealed class TileContent(
             2 -> Road
             3 -> OutOfBounds
             4 -> Business
+            5 -> TaxiStation
             else -> error("invalid tile id: $id")
         }
     }

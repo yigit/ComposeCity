@@ -47,7 +47,7 @@ class CitySnapshot(
             )._cars.add(carSnapshot)
             carSnapshot
         }
-        availablePassengers = city.passangers.value.mapNotNull {
+        availablePassengers = city.passengers.value.mapNotNull {
             val car = it.car.value
             if (car == null) {
                 PassangerSnapshot(

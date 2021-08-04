@@ -5,8 +5,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlin.math.roundToInt
 
 class Player(
+    initialMoney: Int
 ) {
-    private val _money = MutableStateFlow(1000)
+    private val _money = MutableStateFlow(initialMoney)
     private var _pendingDistance = 0f
 
     val money: StateFlow<Int>

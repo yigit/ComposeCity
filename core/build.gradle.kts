@@ -3,6 +3,7 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
     kotlin("jvm")
+    kotlin("plugin.serialization") version "1.5.20"
 }
 
 group = "com.bitbit"
@@ -24,4 +25,5 @@ dependencies {
     implementation(kotlin("stdlib"))
     implementation(project(":math"))
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.5.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.2.2")
 }

@@ -2,7 +2,7 @@ package com.birbit.composecity.data
 
 import com.birbit.composecity.GameTime
 import com.birbit.composecity.ai.CarAILoop
-import com.birbit.composecity.data.serialization.SerializedCity
+import com.birbit.composecity.data.serialization.LoadSave
 import com.birbit.composecity.data.snapshot.CitySnapshot
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
@@ -13,6 +13,7 @@ import kotlin.random.Random
 import kotlin.time.Duration
 import kotlin.time.ExperimentalTime
 
+// TODO add ability to return value for events.
 interface Event {
     fun apply(gameLoop: GameLoop, city: City)
 }
@@ -45,7 +46,7 @@ class ToggleTileEvent(
 ) : Event {
     override fun apply(gameLoop: GameLoop, city: City) {
         if (tile.contentValue == TileContent.Grass) {
-            gameLoop.player.deductMoney(Player.COST_OF_ROAD) {
+            gameLoop.player.value.deductMoney(Player.COST_OF_ROAD) {
                 tile.contentValue = TileContent.Road
             }
         } else if (tile.contentValue == TileContent.Road) {
@@ -59,6 +60,7 @@ class AddCarEvent(
 ) : Event {
     override fun apply(gameLoop: GameLoop, city: City) {
         val newCar = Car(
+            id = city.idGenerator.nextId(),
             initialPos = tile.center,
             taxiStation = tile
         )
@@ -73,9 +75,10 @@ class AddTaxiStationEvent(
         if (tile.contentValue != TileContent.Grass) {
             return
         }
-        gameLoop.player.deductMoney(Player.COST_OF_TAXI_STATION) {
+        gameLoop.player.value.deductMoney(Player.COST_OF_TAXI_STATION) {
             tile.contentValue = TileContent.TaxiStation
             val newCar = Car(
+                id = city.idGenerator.nextId(),
                 initialPos = tile.center,
                 taxiStation = tile
             )
@@ -88,15 +91,24 @@ class AddTaxiStationEvent(
 val SAVE_FILE_NAME = "saved.city"
 class SaveEvent : Event {
     override fun apply(gameLoop: GameLoop, city: City) {
-        val serializedCity = SerializedCity.create(city)
-        File(SAVE_FILE_NAME).writeBytes(serializedCity.data)
+        val loadSave = LoadSave.create2(gameLoop)
+        File(SAVE_FILE_NAME).writeText(loadSave.data)
     }
 }
 
 class LoadEvent: Event {
     override fun apply(gameLoop: GameLoop, city: City) {
-        val city = SerializedCity(File(SAVE_FILE_NAME).readBytes()).buildCity()
-        gameLoop.changeCity(city)
+        File(SAVE_FILE_NAME)?.let {
+            if (it.exists()) {
+                LoadSave(it.readText(Charsets.UTF_8))
+            } else {
+                null
+            }
+        }?.let {
+            val (city, player) = it.create()
+            gameLoop.updateFrom(city, player)
+        }
+
     }
 }
 
@@ -110,17 +122,15 @@ class AddPassangerEvent: Event {
             it.contentValue == TileContent.Road
         }
         if (roadTiles.isEmpty()) return
-        val passengersWithTiles = city.passangers.value.map {
+        val passengersWithTiles = city.passengers.value.map {
             city.map.tiles.findClosest(it.pos.value)
         }
         repeat(100) {
             val tile = roadTiles[gameLoop.rand.nextInt(roadTiles.size)]
             if (!passengersWithTiles.contains(tile)) {
                 // find business
-                val target = businessTiles.get(
-                    gameLoop.rand.nextInt(businessTiles.size)
-                )
-                city.addPassanger(Passenger(pos = tile.center, target = target))
+                val target = businessTiles[gameLoop.rand.nextInt(businessTiles.size)]
+                city.addPassenger(Passenger(id = city.idGenerator.nextId(), pos = tile.center, target = target))
                 return
             }
         }
@@ -128,8 +138,11 @@ class AddPassangerEvent: Event {
 }
 
 @OptIn(ExperimentalTime::class)
+// TODO separate GAME from GameLoop
 class GameLoop {
-    val player = Player()
+    private val _player = MutableStateFlow(Player(1000))
+    val player: StateFlow<Player>
+        get() = _player
     val gameTime = GameTime()
     internal val rand = Random(System.nanoTime())
     private val _city = MutableStateFlow(
@@ -141,23 +154,24 @@ class GameLoop {
     val cityValue
         get() = _city.value
 
-    internal fun changeCity(city: City) {
+    internal fun updateFrom(city: City, player: Player) {
         _city.value = city
+        _player.value = player
     }
     private val events = Channel<Event>(
         capacity = Channel.UNLIMITED
     )
     private val aiDispatcher = Executors.newSingleThreadExecutor().asCoroutineDispatcher()
     private val aiScope = CoroutineScope(aiDispatcher + Job())
-    private val scope = CoroutineScope(Dispatchers.Main + Job())
+    private val gameScope = CoroutineScope(Dispatchers.Main + Job())
 
     fun start() {
         events.consumeAsFlow().onEach {
             // there is a possibility that we may not want certain events at the same time
             // we can get some priority OR categorization (probably categorization)
             it.apply(this, cityValue)
-        }.launchIn(scope)
-        scope.launch {
+        }.launchIn(gameScope)
+        gameScope.launch {
             timedLoop(
                 // well, this should actually sync w/ frame time, but we don't have frame time :) or maybe we do?
                 period = Duration.milliseconds(16)
@@ -168,7 +182,7 @@ class GameLoop {
                 val delta = gameTime.gameTick()
                 val city = cityValue
                 val cars = city.cars.value
-                val passengers = city.passangers.value
+                val passengers = city.passengers.value
                 var distanceTraveledByCars = 0f
                 cars.forEach {
                     val initalPos = it.pos.value
@@ -183,9 +197,9 @@ class GameLoop {
                 val arrivedPassengers = passengers.filter {
                     it.target.center.dist(it.pos.value) < CityMap.TILE_SIZE / 2
                 }
-                arrivedPassengers.forEach(player::onDeliveredPassenger)
-                arrivedPassengers.forEach(city::removePassanger)
-                player.onDistanceTraveledByCars(distanceTraveledByCars)
+                arrivedPassengers.forEach(player.value::onDeliveredPassenger)
+                arrivedPassengers.forEach(city::removePassenger)
+                player.value.onDistanceTraveledByCars(distanceTraveledByCars)
             }
         }
         aiScope.launch {
@@ -193,20 +207,29 @@ class GameLoop {
             timedLoop(
                 period = Duration.milliseconds(250)
             ) { _ ->
-                val snapshot = CitySnapshot(cityValue)
-                val event = CarAILoop().doAILoop(snapshot)
-                addEvent(event)
+                val snapshot = withContext(gameScope.coroutineContext) {
+                    if (gameTime.gameSpeed.value == GameTime.GameSpeed.STOPPED) {
+                        null
+                    } else {
+                        CitySnapshot(cityValue)
+                    }
+                }
+                snapshot?.let {
+                    val event = CarAILoop().doAILoop(snapshot)
+                    addEvent(event)
+                }
+
             }
         }
     }
 
     private fun pickUp(
+        city: City,
         passenger: Passenger,
         car: Car?
     ) {
         if (car == null) return
-        car.passenger = passenger
-        passenger.setCar(car)
+        city.associatePassengerWithCar(passenger, car)
     }
 
     private fun pickUpPassengers(
@@ -225,7 +248,7 @@ class GameLoop {
             if (freePassengers != null) {
                 freePassengers.forEachIndexed { index, passanger ->
                     pickUp(
-                        passanger, cars.getOrNull(index)
+                        city, passanger, cars.getOrNull(index)
                     )
                 }
             }

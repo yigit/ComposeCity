@@ -1,5 +1,6 @@
 package com.birbit.composecity.data
 
+import com.birbit.composecity.Id
 import com.birbit.composecity.data.snapshot.CitySnapshot
 import com.curiouscreature.kotlin.math.*
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -39,6 +40,7 @@ fun Pos.findPos(
     return this + normal.times(available.toFloat())
 }
 class Car(
+    val id:Id,
     initialPos: Pos = Pos(0f, 0f),
     val taxiStation: Tile
 ) {

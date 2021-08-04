@@ -1,13 +1,13 @@
 package com.birbit.composecity.data
 
+import com.birbit.composecity.Id
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.mapLatest
 import kotlin.time.Duration
 import kotlin.time.ExperimentalTime
 
 class Passenger(
+    val id: Id,
     pos: Pos,
     val target: Tile,
     car: Car? = null
