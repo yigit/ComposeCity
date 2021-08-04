@@ -31,6 +31,7 @@ private class AddBusinessEvent: AIEventWithResult<Duration?>() {
             val col = aiRand.nextInt(city.map.width)
             val tile = city.map.tiles.get(row = row, col = col)
             if (tile.contentValue == TileContent.Grass) {
+                // TODO businesses should be cached in City
                 tile.contentValue = TileContent.Business
                 return gameLoop.gameTime.now.value
             }

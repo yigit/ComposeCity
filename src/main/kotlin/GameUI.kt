@@ -36,23 +36,20 @@ fun GameUI(gameLoop: GameLoop, onExit: () -> Unit) {
         override fun onExit() {
             onExit()
         }
-        override fun onCarMenuClick() {
-            uiControls.toggleMode(Mode.ADD_CAR)
-        }
-
+        
         override fun onTaxiMenuClick() {
             uiControls.toggleMode(Mode.ADD_TAXI_STATION)
         }
 
-        override fun onBusinessMenuClick() {
-            uiControls.toggleMode(Mode.ADD_BUSINESS)
+        override fun onAddCar() {
+            uiControls.toggleMode(Mode.ADD_CAR)
         }
 
         override fun onTileClick(tile: Tile) {
             if (uiControls.modeValue == Mode.CHANGE_TILE) {
                 gameLoop.addEvent(ToggleTileEvent(tile))
-            } else if (uiControls.modeValue == Mode.ADD_CAR && tile.contentValue == TileContent.Road) {
-                gameLoop.addEvent(AddCarEvent(tile))
+            } else if (uiControls.modeValue == Mode.ADD_CAR) {
+                gameLoop.addEvent(AddCarToStationEvent(tile))
             } else if (uiControls.modeValue == Mode.ADD_BUSINESS) {
                 gameLoop.addEvent(CreateBusinessEvent(tile))
             } else if (uiControls.modeValue == Mode.ADD_TAXI_STATION) {
@@ -92,9 +89,8 @@ fun GameUI(gameLoop: GameLoop, onExit: () -> Unit) {
 
 
 interface ControlCallbacks {
-    fun onCarMenuClick()
     fun onTaxiMenuClick()
-    fun onBusinessMenuClick()
+    fun onAddCar()
     fun onTileClick(tile: Tile)
     fun onSave()
     fun onAddPassanger()
@@ -197,35 +193,18 @@ fun ControlsUI(
             }
         )
         BottomNavigationItem(
-            selected = mode == Mode.ADD_BUSINESS,
-            onClick = callbacks::onBusinessMenuClick,
+            selected = mode == Mode.ADD_CAR,
+            onClick = callbacks::onAddCar,
             alwaysShowLabel = false,
             icon = {
                 Icon(
-                    bitmap = ImageCache.loadResource("business.png"),
-                    contentDescription = "add business",
-                    modifier = Modifier.fillMaxSize(.5f)
+                    bitmap = ImageCache.loadResource("car.png"),
+                    contentDescription = "add car"
                 )
             },
             enabled = true,
             label = {
                 Text("add business")
-            }
-        )
-        BottomNavigationItem(
-            selected = false,
-            onClick = callbacks::onAddPassanger,
-            alwaysShowLabel = true,
-            icon = {
-                Icon(
-                    bitmap = ImageCache.loadResource("passenger.png"),
-                    contentDescription = "add passenger",
-                    modifier = Modifier.fillMaxSize(.5f)
-                )
-            },
-            enabled = true,
-            label = {
-                Text("add passenger")
             }
         )
         BottomNavigationItem(

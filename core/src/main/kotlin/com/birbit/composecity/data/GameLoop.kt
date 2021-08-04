@@ -19,6 +19,27 @@ interface Event {
     fun apply(gameLoop: GameLoop, city: City)
 }
 
+class AddCarToStationEvent(
+    val tile: Tile
+) : Event {
+    override fun apply(gameLoop: GameLoop, city: City) {
+        if (tile.contentValue == TileContent.TaxiStation) {
+            gameLoop.player.deductMoney(
+                Player.COST_OF_CAR
+            ) {
+                city.addCar(
+                    Car(
+                        id = city.idGenerator.nextId(),
+                        initialPos = tile.center,
+                        taxiStation = tile
+                    )
+                )
+            }
+        }
+    }
+
+}
+
 class CompositeEvent(
     val events: List<Event>
 ) : Event {
