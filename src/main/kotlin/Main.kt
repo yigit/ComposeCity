@@ -74,7 +74,8 @@ fun main() = Window {
             ControlsUI(
                 controls = uiControls,
                 callbacks = uiCallbacks,
-                modifier = Modifier.align(Alignment.BottomCenter)
+                modifier = Modifier.align(Alignment.BottomCenter),
+                player = gameLoop.player
             )
         }
 
@@ -95,10 +96,11 @@ interface ControlCallbacks {
 fun ControlsUI(
     controls: UIControls,
     callbacks: ControlCallbacks,
+    player: Player,
     modifier: Modifier = Modifier
 ) {
     val mode by controls.mode.collectAsState()
-
+    val money by player.money.collectAsState()
     Box(
         modifier = modifier.fillMaxWidth(.8f).height(TILE_SIZE_DP)
     ) {
@@ -106,7 +108,7 @@ fun ControlsUI(
             modifier = Modifier.wrapContentSize(
                 align = Alignment.Center
             ).background(
-                Color.LightGray
+                MaterialTheme.colors.background
             )
         ) {
             Button(
@@ -141,10 +143,24 @@ fun ControlsUI(
                 )
             }
             Button(
+                onClick = {}
+            ) {
+                Text(
+                    modifier = Modifier.defaultMinSize(64.dp),
+                    color = MaterialTheme.colors.onPrimary,
+                    text = "$${money}"
+                )
+            }
+
+            Button(
                 onClick = callbacks::onAddPassanger
             ) {
-                Text(text = "Add Passenger")
+                Text(
+                    color = MaterialTheme.colors.onPrimary,
+                    text = "Add passenger"
+                )
             }
+
             Button(
                 onClick = callbacks::onSave
             ) {

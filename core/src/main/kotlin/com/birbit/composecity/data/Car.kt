@@ -31,9 +31,9 @@ fun Pos.findPos(
     distance: Double
 ): Pos {
     val vector = target.minus(this)
+    val available = minOf(distance, length(vector).toDouble())
     val normal = normalize(vector)
-    val result = this + normal.times(distance.toFloat())
-    return result
+    return this + normal.times(available.toFloat())
 }
 class Car(
     initialPos: Pos = Pos(0f, 0f),

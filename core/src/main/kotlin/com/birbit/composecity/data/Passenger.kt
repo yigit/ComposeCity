@@ -12,6 +12,7 @@ class Passenger(
     val target: Tile,
     car: Car? = null
 ) {
+    val initialPos = pos
     private val _pos = MutableStateFlow(pos)
     val pos: StateFlow<Pos>
         get() = _pos

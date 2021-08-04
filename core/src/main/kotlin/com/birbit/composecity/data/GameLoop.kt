@@ -70,12 +70,15 @@ class AddTaxiStationEvent(
         if (tile.contentValue != TileContent.Grass) {
             return
         }
-        tile.contentValue = TileContent.TaxiStation
-        val newCar = Car(
-            initialPos = tile.center,
-            taxiStation = tile
-        )
-        city.addCar(newCar)
+        gameLoop.player.deductMoney(Player.COST_OF_TAXI_STATION) {
+            tile.contentValue = TileContent.TaxiStation
+            val newCar = Car(
+                initialPos = tile.center,
+                taxiStation = tile
+            )
+            city.addCar(newCar)
+        }
+
     }
 }
 
@@ -123,6 +126,7 @@ class AddPassangerEvent: Event {
 
 @OptIn(ExperimentalTime::class)
 class GameLoop {
+    val player = Player()
     internal val rand = Random(System.nanoTime())
     private val _city = MutableStateFlow(
         City(CityMap(width = 20, height = 20))
@@ -157,8 +161,12 @@ class GameLoop {
                 val city = cityValue
                 val cars = city.cars.value
                 val passengers = city.passangers.value
+                var distanceTraveledByCars = 0f
                 cars.forEach {
+                    val initalPos = it.pos.value
                     it.doGameLoop(city, delta)
+                    val finalPos=  it.pos.value
+                    distanceTraveledByCars += finalPos.dist(initalPos)
                 }
                 passengers.forEach {
                     it.doGameLoop(city, delta)
@@ -167,7 +175,9 @@ class GameLoop {
                 val arrivedPassengers = passengers.filter {
                     it.target.center.dist(it.pos.value) < CityMap.TILE_SIZE / 2
                 }
+                arrivedPassengers.forEach(player::onDeliveredPassenger)
                 arrivedPassengers.forEach(city::removePassanger)
+                player.onDistanceTraveledByCars(distanceTraveledByCars)
             }
         }
         aiScope.launch {
