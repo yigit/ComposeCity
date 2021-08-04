@@ -1,16 +1,14 @@
 package com.birbit.composecity.data.serialization
 
+import com.birbit.composecity.GameTime
 import com.birbit.composecity.Id
 import com.birbit.composecity.data.*
-import com.birbit.composecity.data.serialization.LoadSave.Companion.toSerialized
-import kotlinx.coroutines.flow.map
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import java.io.ByteArrayInputStream
-import java.io.ByteArrayOutputStream
-import java.io.File
+import kotlin.time.Duration
+import kotlin.time.ExperimentalTime
 
 @Serializable
 private data class SerializedPos(
@@ -29,6 +27,11 @@ private data class SerializedPassenger(
     val id: Id,
     val initialPos: SerializedPos,
     val target: SerializedCoordinates
+)
+
+@Serializable
+private data class SerializedGameTime(
+    val timeInSeconds : Long
 )
 
 @Serializable
@@ -58,17 +61,21 @@ private data class SerializedPlayer(
 @Serializable
 private data class SerializedGame(
     val player: SerializedPlayer,
-    val city: SerializedCity
+    val city: SerializedCity,
+    val gameTime: SerializedGameTime
 )
 
 class LoadSave(
     val data: String
 ) {
-    fun create(): Pair<City, Player> {
+    @OptIn(ExperimentalTime::class)
+    fun create(): Triple<City, Player, Duration> {
         val decoded = Json.decodeFromString<SerializedGame>(data)
         val city = decoded.city.toGameObject()
         val player = decoded.player.toGameObject()
-        return city to player
+        val gameTime = decoded.gameTime.timeInSeconds
+        // TODO use a proper data class
+        return Triple(city, player, Duration.seconds(gameTime))
     }
     companion object {
         private fun Player.toSerialized() = SerializedPlayer(
@@ -119,10 +126,15 @@ class LoadSave(
                 carPassengerMapping = carPassengerMapping
             )
         }
-        fun create2(gameLoop: GameLoop): LoadSave {
+        @OptIn(ExperimentalTime::class)
+        private fun GameTime.toSerialized() = SerializedGameTime(
+            timeInSeconds = this.now.value.inWholeSeconds
+        )
+        fun create(gameLoop: GameLoop): LoadSave {
             val serialized = SerializedGame(
                 player = gameLoop.player.value.toSerialized(),
-                city = gameLoop.city.value.toSerialized()
+                city = gameLoop.city.value.toSerialized(),
+                gameTime = gameLoop.gameTime.toSerialized()
             )
             val json = Json.encodeToString(serialized)
             return LoadSave(
@@ -191,6 +203,6 @@ class LoadSave(
             }
             return city
         }
-        const val VERSION = 2
+        const val VERSION = 3
     }
 }

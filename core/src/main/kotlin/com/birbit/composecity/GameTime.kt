@@ -25,7 +25,7 @@ class GameTime {
     }
 
 
-    private val _gameSpeed = MutableStateFlow(GameSpeed.STOPPED)
+    private val _gameSpeed = MutableStateFlow(GameSpeed.PAUSED)
 
     val gameSpeed: StateFlow<GameSpeed>
         get() = _gameSpeed
@@ -46,6 +46,10 @@ class GameTime {
         return tickDuration
     }
 
+    internal fun setNow(duration: Duration) {
+        _now.value = duration
+    }
+
     companion object {
         private val START_TIME = Duration.ZERO
     }
@@ -53,7 +57,7 @@ class GameTime {
     enum class GameSpeed(
         val tickDuration: Duration
     ) {
-        STOPPED(tickDuration = Duration.ZERO),
+        PAUSED(tickDuration = Duration.ZERO),
         SLOW(tickDuration = Duration.seconds(5)),
         NORMAL(tickDuration = Duration.seconds(10)),
         FAST(tickDuration = Duration.seconds(20))

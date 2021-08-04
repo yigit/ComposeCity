@@ -91,22 +91,22 @@ class AddTaxiStationEvent(
 val SAVE_FILE_NAME = "saved.city"
 class SaveEvent : Event {
     override fun apply(gameLoop: GameLoop, city: City) {
-        val loadSave = LoadSave.create2(gameLoop)
+        val loadSave = LoadSave.create(gameLoop)
         File(SAVE_FILE_NAME).writeText(loadSave.data)
     }
 }
 
 class LoadEvent: Event {
     override fun apply(gameLoop: GameLoop, city: City) {
-        File(SAVE_FILE_NAME)?.let {
+        File(SAVE_FILE_NAME).let {
             if (it.exists()) {
                 LoadSave(it.readText(Charsets.UTF_8))
             } else {
                 null
             }
         }?.let {
-            val (city, player) = it.create()
-            gameLoop.updateFrom(city, player)
+            val (city, player, timeInSeconds) = it.create()
+            gameLoop.updateFrom(city, player, timeInSeconds)
         }
 
     }
@@ -154,9 +154,10 @@ class GameLoop {
     val cityValue
         get() = _city.value
 
-    internal fun updateFrom(city: City, player: Player) {
+    internal fun updateFrom(city: City, player: Player, timeInSeconds: Duration) {
         _city.value = city
         _player.value = player
+        gameTime.setNow(timeInSeconds)
     }
     private val events = Channel<Event>(
         capacity = Channel.UNLIMITED
@@ -165,7 +166,11 @@ class GameLoop {
     private val aiScope = CoroutineScope(aiDispatcher + Job())
     private val gameScope = CoroutineScope(Dispatchers.Main + Job())
 
-    fun start() {
+    init {
+        start()
+    }
+
+    private fun start() {
         events.consumeAsFlow().onEach {
             // there is a possibility that we may not want certain events at the same time
             // we can get some priority OR categorization (probably categorization)
@@ -176,7 +181,7 @@ class GameLoop {
                 // well, this should actually sync w/ frame time, but we don't have frame time :) or maybe we do?
                 period = Duration.milliseconds(16)
             ) { _ ->
-                if (gameTime.gameSpeed.value == GameTime.GameSpeed.STOPPED) {
+                if (gameTime.gameSpeed.value == GameTime.GameSpeed.PAUSED) {
                     return@timedLoop
                 }
                 val delta = gameTime.gameTick()
@@ -208,7 +213,7 @@ class GameLoop {
                 period = Duration.milliseconds(250)
             ) { _ ->
                 val snapshot = withContext(gameScope.coroutineContext) {
-                    if (gameTime.gameSpeed.value == GameTime.GameSpeed.STOPPED) {
+                    if (gameTime.gameSpeed.value == GameTime.GameSpeed.PAUSED) {
                         null
                     } else {
                         // TODO we need to eventually make this snapshot incremental.

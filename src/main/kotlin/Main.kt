@@ -1,4 +1,6 @@
 // Copyright 2000-2021 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license that can be found in the LICENSE file.
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.desktop.DesktopMaterialTheme
 import androidx.compose.desktop.Window
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -12,24 +14,35 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.text.toLowerCase
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.rememberWindowState
+import androidx.compose.ui.window.singleWindowApplication
 import com.birbit.composecity.GameTime
 import com.birbit.composecity.SetGameSpeedEvent
 import com.birbit.composecity.data.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
 import java.text.DecimalFormat
+import java.util.*
 import kotlin.time.ExperimentalTime
 
 val SCALE = 1f
 val TILE_SIZE_DP = (CityMap.TILE_SIZE * SCALE).dp
 val CAR_SIZE_DP = (Car.CAR_SIZE * SCALE).dp
 val PASSENGER_SIZE_DP = TILE_SIZE_DP / 4
-fun main() = Window {
-    val uiControls = UIControls()
-
+fun main() {
     val gameLoop = GameLoop()
-    gameLoop.start()
+    singleWindowApplication(
+        title = "Compose City"
+    ) {
+        GameUI(gameLoop)
+    }
+}
+@Composable
+fun GameUI(gameLoop: GameLoop) {
+    val uiControls = UIControls()
     val city by gameLoop.city.collectAsState()
 
     val uiCallbacks = object : ControlCallbacks {
@@ -76,7 +89,8 @@ fun main() = Window {
         }
     }
     val player by gameLoop.player.collectAsState()
-    MaterialTheme {
+    val windowState = rememberWindowState(width = Dp.Unspecified, height = Dp.Unspecified) //automatic size
+    DesktopMaterialTheme {
         Box {
             CityMapUI(city, uiCallbacks)
             ControlsUI(
@@ -91,6 +105,7 @@ fun main() = Window {
     }
 }
 
+
 interface ControlCallbacks {
     fun onCarMenuClick()
     fun onTaxiMenuClick()
@@ -102,7 +117,7 @@ interface ControlCallbacks {
     fun onSetGameSpeed(speed: GameTime.GameSpeed)
 }
 
-@OptIn(ExperimentalTime::class)
+@OptIn(ExperimentalTime::class, androidx.compose.animation.ExperimentalAnimationApi::class)
 @Composable
 fun ControlsUI(
     controls: UIControls,
@@ -147,7 +162,7 @@ fun ControlsUI(
             enabled = true,
             alwaysShowLabel = true,
             icon = {
-                Text(passedTime, style = MaterialTheme.typography.subtitle1)
+                Text(passedTime)
             },
             label = {
 
@@ -155,19 +170,27 @@ fun ControlsUI(
         )
         if (showGameSpeeds) {
             GameTime.GameSpeed.values().forEach { speed ->
+                val resourceName = "game-speed-" + when (speed) {
+                    GameTime.GameSpeed.NORMAL -> "normal"
+                    GameTime.GameSpeed.PAUSED -> "paused"
+                    GameTime.GameSpeed.FAST -> "fast"
+                    GameTime.GameSpeed.SLOW -> "slow"
+                } + ".png"
                 BottomNavigationItem(
                     selected = gameSpeed == speed,
                     onClick = {
                         callbacks.onSetGameSpeed(speed)
                     },
-                    enabled = speed != gameSpeed
-                    ,
+                    enabled = speed != gameSpeed,
                     alwaysShowLabel = false,
                     icon = {
-                        Text(speed.name) // TODO icons
+                        Icon(
+                            bitmap = ImageCache.loadResource(resourceName),
+                            contentDescription = speed.name
+                        )
                     },
                     label = {
-                        Text("*")
+                        Text(speed.name.lowercase(Locale.US))
                     }
                 )
             }
@@ -224,7 +247,7 @@ fun ControlsUI(
             selected = false,
             onClick = callbacks::onSave,
             icon = {
-                   Text("SAVE")
+                Text("SAVE")
             },
             alwaysShowLabel = false,
             enabled = true,
@@ -299,6 +322,7 @@ fun PassangerUI(
         ),
     )
 }
+
 @Composable
 fun CarUI(
     cityMap: CityMap,
