@@ -2,6 +2,7 @@
 
 package com.birbit.composecity.ai
 
+import com.birbit.composecity.Id
 import com.birbit.composecity.data.*
 import com.birbit.composecity.data.snapshot.CitySnapshot
 import kotlinx.coroutines.CompletableDeferred
@@ -40,6 +41,22 @@ private class AddBusinessEvent: AIEventWithResult<Duration?>() {
     }
 }
 
+private class SetPassengerMoodIfNotOnCar(
+    private val passengerId: Id,
+    private val mood: Passenger.Mood
+) : Event {
+    override fun apply(gameLoop: GameLoop, city: City) {
+        val passenger = city.passengers.value.firstOrNull {
+            it.id == passengerId
+        } ?: return
+        if (passenger.car.value != null) {
+            return
+        }
+        passenger.setMood(mood)
+    }
+
+}
+
 private class AddPassengerEvent: AIEventWithResult<Duration?>() {
     override fun doApply(gameLoop: GameLoop, city: City): Duration? {
         val businessTiles = city.map.tiles.data.filter {
@@ -56,13 +73,26 @@ private class AddPassengerEvent: AIEventWithResult<Duration?>() {
                     Passenger(
                         id = city.idGenerator.nextId(),
                         pos = tile.center,
-                        target = targetBusiness
+                        target = targetBusiness,
+                        creationTime = gameLoop.gameTime.now.value
                     )
                 )
                 return gameLoop.gameTime.now.value
             }
         }
         return null
+    }
+}
+
+private class RemoveUpsetPassenger(
+    val passengerId: Id
+): Event {
+    override fun apply(gameLoop: GameLoop, city: City) {
+        val passenger = city.passengers.value.firstOrNull {
+            it.id == passengerId && it.car.value == null
+        } ?: return
+        gameLoop.player.onMissedPassenger(passenger)
+        city.removeUnpickedPassenger(passenger)
     }
 
 }
@@ -71,7 +101,7 @@ private class AddPassengerEvent: AIEventWithResult<Duration?>() {
 class CityAILoop(
     lastAddedPassengerTime: Duration = Duration.ZERO,
     lastAddedBusinessTime: Duration = Duration.ZERO,
-    config: Config = Config()
+    private val config: Config = Config()
 ) {
     private val addBusinessConstraint = DurationConstraint(
         min = config.minTimeBetweenNewBusinesses,
@@ -88,8 +118,10 @@ class CityAILoop(
     ): Event {
         val businessEvent = handleBusinessCreation(citySnapshot)
         val passengerEvent = handlePassengerCreation(citySnapshot)
+        val passengerEvents = handlePassengerMoods(citySnapshot)
+        val leavingPassengers = handlePassengerLeave(citySnapshot)
         return CompositeEvent(
-            listOfNotNull(businessEvent, passengerEvent)
+            listOfNotNull(businessEvent, passengerEvent, passengerEvents, leavingPassengers)
         )
     }
 
@@ -108,12 +140,62 @@ class CityAILoop(
         }
     }
 
+    private fun handlePassengerLeave(citySnapshot: CitySnapshot): Event? {
+        val now = citySnapshot.now
+        val events = citySnapshot.availablePassengers.mapNotNull { passenger ->
+            val waitTime = now - passenger.creationTime
+            if (waitTime > config.maxPassengerWaitDuration) {
+                RemoveUpsetPassenger(passengerId = passenger.id)
+            } else {
+                null
+            }
+        }
+        return if (events.isEmpty()) {
+            null
+        } else {
+            CompositeEvent(events)
+        }
+    }
+
+    private fun handlePassengerMoods(citySnapshot: CitySnapshot): Event? {
+        val now = citySnapshot.now
+        val events = citySnapshot.availablePassengers.mapNotNull { passenger ->
+            val expectedMood = config.expectedPassengerMood(
+                now - passenger.creationTime
+            )
+            if (passenger.mood != expectedMood) {
+                SetPassengerMoodIfNotOnCar(
+                    passengerId = passenger.id,
+                    mood = expectedMood
+                )
+            } else {
+                null
+            }
+        }
+        return if (events.isEmpty()) {
+            null
+        } else {
+            CompositeEvent(events)
+        }
+    }
+
     class Config(
         val minTimeBetweenNewPassengers: Duration = Duration.hours(1),
         val maxTimeBetweenNewPassengers: Duration = Duration.hours(2),
 
         val minTimeBetweenNewBusinesses: Duration = Duration.days(1),
-        val maxTimeBetweenNewBusinesses: Duration = Duration.days(2)
+        val maxTimeBetweenNewBusinesses: Duration = Duration.days(2),
+
+        val maxPassengerWaitDuration: Duration = Duration.hours(6),
+
+        val expectedPassengerMood : (waitingTime: Duration) -> Passenger.Mood = { waitingTime ->
+            when {
+                waitingTime < Duration.minutes(45) -> Passenger.Mood.NEW
+                waitingTime < Duration.hours(2) -> Passenger.Mood.OK
+                waitingTime < Duration.hours(4) -> Passenger.Mood.GETTING_UPSET
+                else -> Passenger.Mood.UPSET
+            }
+        }
     )
 
     private class DurationConstraint(
@@ -139,8 +221,8 @@ class CityAILoop(
                 pendingEvent = null
             }
             val durationSinceLastAction = (now - lastAction).inWholeMinutes
-            val shouldCreate = rand.nextLong(
-                from = if (lastAction == Duration.ZERO) 0 else min,
+            val shouldCreate = lastAction == Duration.ZERO || rand.nextLong(
+                from = min,
                 until = max
             ) <= durationSinceLastAction
             if (!shouldCreate) {

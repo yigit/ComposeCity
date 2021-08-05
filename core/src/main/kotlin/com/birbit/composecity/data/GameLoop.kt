@@ -129,31 +129,6 @@ class SaveEvent : Event {
     }
 }
 
-class AddPassangerEvent: Event {
-    override fun apply(gameLoop: GameLoop, city: City) {
-        val businessTiles = city.map.tiles.data.filter {
-            it.contentValue == TileContent.Business
-        }
-        if(businessTiles.isEmpty()) return
-        val roadTiles = city.map.tiles.data.filter {
-            it.contentValue == TileContent.Road
-        }
-        if (roadTiles.isEmpty()) return
-        val passengersWithTiles = city.passengers.value.map {
-            city.map.tiles.findClosest(it.pos.value)
-        }
-        repeat(100) {
-            val tile = roadTiles[gameLoop.rand.nextInt(roadTiles.size)]
-            if (!passengersWithTiles.contains(tile)) {
-                // find business
-                val target = businessTiles[gameLoop.rand.nextInt(businessTiles.size)]
-                city.addPassenger(Passenger(id = city.idGenerator.nextId(), pos = tile.center, target = target))
-                return
-            }
-        }
-    }
-}
-
 @OptIn(ExperimentalTime::class)
 // TODO separate GAME from GameLoop
 class GameLoop(

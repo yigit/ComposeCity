@@ -5,16 +5,31 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlin.math.roundToInt
 
 class Player(
-    initialMoney: Int
+    initialMoney: Int,
+    deliveredPassengers: Int,
+    missedPassengers: Int
 ) {
     private val _money = MutableStateFlow(initialMoney)
+    private val _deliveredPassengers = MutableStateFlow(deliveredPassengers)
+    private val _missedPassengers = MutableStateFlow(missedPassengers)
     private var _pendingDistance = 0f
 
     val money: StateFlow<Int>
         get() = _money
 
+    val deliveredPassengers: StateFlow<Int>
+        get() = _deliveredPassengers
+
+    val missedPassengers: StateFlow<Int>
+        get() = _missedPassengers
+
     fun onDeliveredPassenger(passenger: Passenger) {
+        _deliveredPassengers.value += 1
         _money.value += computeDeliveryFee(passenger)
+    }
+
+    fun onMissedPassenger(passenger: Passenger) {
+        _missedPassengers.value += 1
     }
 
     fun onDistanceTraveledByCars(distance: Float) {

@@ -1,3 +1,4 @@
+@file:OptIn(ExperimentalTime::class)
 package com.birbit.composecity.data.serialization
 
 import com.birbit.composecity.GameTime
@@ -12,6 +13,12 @@ import kotlin.time.Duration
 import kotlin.time.ExperimentalTime
 
 @Serializable
+@JvmInline
+private value class SerializedDuration(
+    val timeInWholeSeconds: Long
+)
+
+@Serializable
 private data class SerializedPos(
     val row: Float,
     val col: Float
@@ -24,15 +31,11 @@ private data class SerializedCoordinates(
 )
 
 @Serializable
-private data class SerializedPassenger(
+private data class SerializedPassenger  constructor(
     val id: Id,
     val initialPos: SerializedPos,
-    val target: SerializedCoordinates
-)
-
-@Serializable
-private data class SerializedGameTime(
-    val timeInSeconds : Long
+    val target: SerializedCoordinates,
+    val creationTime: SerializedDuration
 )
 
 @Serializable
@@ -56,14 +59,16 @@ private data class SerializedCity(
 @Serializable
 private data class SerializedPlayer(
     // TODO save pending distance
-    val money: Int
+    val money: Int,
+    val deliveredPassengers: Int,
+    val missedPassengers: Int
 )
 
 @Serializable
 private data class SerializedGame(
     val player: SerializedPlayer,
     val city: SerializedCity,
-    val gameTime: SerializedGameTime
+    val gameTime: SerializedDuration
 )
 
 class LoadSave(
@@ -74,14 +79,22 @@ class LoadSave(
         val decoded = Json.decodeFromString<SerializedGame>(data)
         val city = decoded.city.toGameObject()
         val player = decoded.player.toGameObject()
-        val gameTime = decoded.gameTime.timeInSeconds
+        val gameTime = decoded.gameTime.toGameObject()
         // TODO use a proper data class
-        return Triple(city, player, Duration.seconds(gameTime))
+        return Triple(city, player, gameTime)
     }
     companion object {
-        private fun Player.toSerialized() = SerializedPlayer(
-            money = this.money.value
+        private fun SerializedDuration.toGameObject() = Duration.seconds(this.timeInWholeSeconds)
+
+        private fun Duration.toSerialized() = SerializedDuration(
+            timeInWholeSeconds = this.inWholeSeconds
         )
+        private fun Player.toSerialized() = SerializedPlayer(
+            money = this.money.value,
+            deliveredPassengers = this.deliveredPassengers.value,
+            missedPassengers = this.missedPassengers.value
+        )
+
         private fun Pos.toSerialized() = SerializedPos(
             row = row,
             col = col
@@ -93,7 +106,8 @@ class LoadSave(
             target = SerializedCoordinates(
                 row = target.row,
                 col = target.col
-            )
+            ),
+            creationTime = creationTime.toSerialized()
         )
 
         private fun Car.toSerialized() = SerializedCar(
@@ -127,10 +141,9 @@ class LoadSave(
                 carPassengerMapping = carPassengerMapping
             )
         }
-        @OptIn(ExperimentalTime::class)
-        private fun GameTime.toSerialized() = SerializedGameTime(
-            timeInSeconds = this.now.value.inWholeSeconds
-        )
+
+        private fun GameTime.toSerialized() = this.now.value.toSerialized()
+
         fun load(file: File): LoadSave? {
             if (!file.exists()) return null
             return LoadSave(file.readText(Charsets.UTF_8))
@@ -149,7 +162,9 @@ class LoadSave(
 
         private fun SerializedPlayer.toGameObject() =
             Player(
-                initialMoney = money
+                initialMoney = money,
+                deliveredPassengers = deliveredPassengers,
+                missedPassengers = missedPassengers
             )
 
         private fun SerializedPos.toGameObject() = createPos(row = row, col = col)
@@ -163,6 +178,7 @@ class LoadSave(
                     row = target.row,
                     col = target.col
                 ),
+                creationTime = creationTime.toGameObject(),
                 car = null // assigned later
             )
         private fun SerializedCar.toGameObject(

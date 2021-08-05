@@ -43,4 +43,8 @@ class City(
             car.passenger = null
         }
     }
+
+    fun removeUnpickedPassenger(passenger: Passenger) {
+        _passengers.value -= passenger
+    }
 }

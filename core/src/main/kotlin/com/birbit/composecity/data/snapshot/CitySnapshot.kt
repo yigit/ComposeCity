@@ -1,6 +1,9 @@
 package com.birbit.composecity.data.snapshot
 
+import com.birbit.composecity.Id
 import com.birbit.composecity.data.*
+import kotlin.time.Duration
+import kotlin.time.ExperimentalTime
 
 class CitySnapshot(
     gameLoop: GameLoop,
@@ -9,7 +12,7 @@ class CitySnapshot(
     val blackboard: Blackboard = BlackboardImpl()
     val grid: Grid<TileSnapshot>
     val cars: List<CarSnapshot>
-    val availablePassengers: List<PassangerSnapshot>
+    val availablePassengers: List<PassengerSnapshot>
     val now = gameLoop.gameTime.now.value
     val hasAvailablePassengers
         get() = availablePassengers.isNotEmpty()
@@ -34,7 +37,10 @@ class CitySnapshot(
             val carSnapshot = CarSnapshot(
                 car = car,
                 passenger = car.passenger?.let {
-                    PassangerSnapshot(
+                    PassengerSnapshot(
+                        id = it.id,
+                        creationTime = it.creationTime,
+                        mood = it.mood.value,
                         pos = it.pos.value,
                         target = grid.findClosest(it.target.center)
                     )
@@ -52,7 +58,10 @@ class CitySnapshot(
         availablePassengers = city.passengers.value.mapNotNull {
             val car = it.car.value
             if (car == null) {
-                PassangerSnapshot(
+                PassengerSnapshot(
+                    id = it.id,
+                    creationTime = it.creationTime,
+                    mood = it.mood.value,
                     pos = it.pos.value,
                     target = grid.findClosest(it.pos.value)
                 ).also {
@@ -67,7 +76,7 @@ class CitySnapshot(
     data class TileSnapshot(
         private val tile: Tile,
         val content: TileContent = tile.contentValue,
-        internal val _passangers: MutableList<PassangerSnapshot>,
+        internal val _passangers: MutableList<PassengerSnapshot>,
         internal val _cars: MutableList<CarSnapshot>
     ) {
         fun hasPassanger() = _passangers.isNotEmpty()
@@ -78,7 +87,7 @@ class CitySnapshot(
             get() = tile.col
         val center
             get() = tile.center
-        val passangers: List<PassangerSnapshot>
+        val passangers: List<PassengerSnapshot>
             get() = _passangers
         val cars: List<CarSnapshot>
             get() = _cars
@@ -87,14 +96,19 @@ class CitySnapshot(
     class CarSnapshot(
         internal val car: Car,
         val pos: Pos = car.pos.value,
-        val passenger: PassangerSnapshot? = null,
+        val passenger: PassengerSnapshot? = null,
         val taxiStation: TileSnapshot
     )
 
-    class PassangerSnapshot(
+    @OptIn(ExperimentalTime::class)
+    class PassengerSnapshot(
+        val id: Id,
         val pos: Pos,
-        val target: TileSnapshot
+        val target: TileSnapshot,
+        val mood: Passenger.Mood,
+        val creationTime: Duration
     )
+
 
     fun findPath(
         start: TileSnapshot,

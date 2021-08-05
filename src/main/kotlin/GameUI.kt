@@ -1,4 +1,6 @@
 // Copyright 2000-2021 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license that can be found in the LICENSE file.
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.desktop.DesktopMaterialTheme
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -6,26 +8,30 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.birbit.composecity.GameTime
 import com.birbit.composecity.SetGameSpeedEvent
 import com.birbit.composecity.data.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
-import java.text.DecimalFormat
 import java.util.*
 import kotlin.time.ExperimentalTime
 
-val SCALE = 1f
-val TILE_SIZE_DP = (CityMap.TILE_SIZE * SCALE).dp
-val CAR_SIZE_DP = (Car.CAR_SIZE * SCALE).dp
-val PASSENGER_SIZE_DP = TILE_SIZE_DP / 4
+@Stable
+private data class DisplayConfig(
+    val scale: Float,
+    val tileSizeDp:Dp = (CityMap.TILE_SIZE * scale).dp,
+    val carSizeDp:Dp = (Car.CAR_SIZE * scale).dp,
+    val passengerSizeDp: Dp = tileSizeDp / 4,
+)
 
 @Composable
 fun GameUI(gameLoop: GameLoop, onExit: () -> Unit) {
@@ -63,25 +69,21 @@ fun GameUI(gameLoop: GameLoop, onExit: () -> Unit) {
             )
         }
 
-        override fun onAddPassanger() {
-            gameLoop.addEvent(AddPassangerEvent())
-        }
-
         override fun onSetGameSpeed(speed: GameTime.GameSpeed) {
             gameLoop.addEvent(SetGameSpeedEvent(speed))
         }
     }
     val player = gameLoop.player
     DesktopMaterialTheme {
-        Box {
-            CityMapUI(city, uiCallbacks)
+        Column(modifier = Modifier.fillMaxSize(1f)) {
+            CityMapUI(city, uiCallbacks, modifier = Modifier.weight(1f))
             ControlsUI(
                 controls = uiControls,
                 callbacks = uiCallbacks,
-                modifier = Modifier.align(Alignment.BottomCenter),
                 player = player,
                 gameTime = gameLoop.gameTime
             )
+
         }
     }
 }
@@ -92,7 +94,6 @@ interface ControlCallbacks {
     fun onAddCar()
     fun onTileClick(tile: Tile)
     fun onSave()
-    fun onAddPassanger()
     fun onSetGameSpeed(speed: GameTime.GameSpeed)
     fun onExit()
 }
@@ -118,6 +119,8 @@ fun ControlsUI(
         }
         .collectAsState("00:00")
     val gameSpeed by gameTime.gameSpeed.collectAsState()
+    val deliveredPassengers by player.deliveredPassengers.collectAsState()
+    val missedPassengers by player.missedPassengers.collectAsState()
     // TODO navigation rail si not available, where is it?
     BottomNavigation(
         modifier = modifier
@@ -131,7 +134,7 @@ fun ControlsUI(
                 Text("$money")
             },
             label = {
-                Text("$$$$")
+                Text("$deliveredPassengers / $missedPassengers")
             }
         )
         BottomNavigationItem(
@@ -231,59 +234,96 @@ fun ControlsUI(
     }
 }
 
+private val displayConfig = compositionLocalOf<DisplayConfig> { error("No user found!") }
 @Composable
 fun CityMapUI(
     city: City,
-    controlCallbacks: ControlCallbacks
+    controlCallbacks: ControlCallbacks,
+    modifier: Modifier
 ) {
     val cityMap = city.map
     val currentCars by city.cars.collectAsState()
     val currentFood by city.passengers.collectAsState()
-    Box(
-        modifier = Modifier.size(
-            width = TILE_SIZE_DP.times(cityMap.width),
-            height = TILE_SIZE_DP.times(cityMap.height)
-        )
+    BoxWithConstraints(
+        modifier = modifier
     ) {
-        repeat(cityMap.height) { row ->
-            repeat(cityMap.width) { col ->
-                TileUI(
-                    cityMap = cityMap,
-                    tile = cityMap.tiles.get(row = row, col = col),
-                    modifier = Modifier.absoluteOffset(
-                        x = TILE_SIZE_DP.times(col),
-                        y = TILE_SIZE_DP.times(row)
-                    ),
-                    controlCallbacks::onTileClick
-                )
+        val density = LocalDensity.current.density
+
+        val currentConfig = remember(
+            this.constraints,
+            density
+        ) {
+            val heightPerTile = this.constraints.maxHeight.toFloat() / cityMap.height
+            val widthPerTile = this.constraints.maxWidth.toFloat() / cityMap.width
+            val scale = minOf(heightPerTile, widthPerTile) / CityMap.TILE_SIZE / density
+            DisplayConfig(scale)
+        }
+
+        CompositionLocalProvider(
+            displayConfig provides currentConfig
+        ) {
+            repeat(cityMap.height) { row ->
+                repeat(cityMap.width) { col ->
+                    TileUI(
+                        cityMap = cityMap,
+                        tile = cityMap.tiles.get(row = row, col = col),
+                        modifier = Modifier.absoluteOffset(
+                            x = displayConfig.current.tileSizeDp.times(col),
+                            y = displayConfig.current.tileSizeDp.times(row)
+                        ),
+                        controlCallbacks::onTileClick
+                    )
+                }
             }
-        }
-        currentCars.forEach {
-            CarUI(cityMap, it)
-        }
-        currentFood.forEach {
-            PassangerUI(cityMap, it)
+            currentCars.forEach {
+                CarUI(cityMap, it)
+            }
+            currentFood.forEach {
+                PassangerUI(it)
+            }
         }
     }
 }
 
+private fun Passenger.Mood.color() = when(this) {
+    Passenger.Mood.NEW -> Color.Black
+    Passenger.Mood.OK -> Color.Blue
+    Passenger.Mood.GETTING_UPSET -> Color(0xFFFFA500) // orange
+    Passenger.Mood.UPSET -> Color.Red
+}
+
 @Composable
 fun PassangerUI(
-    cityMap: CityMap,
     passenger: Passenger
 ) {
+    val mood by passenger.mood.collectAsState()
+    val tintColor by animateColorAsState(
+        targetValue = mood.color()
+    )
+    val inCar by passenger.car.map {
+        it != null
+    }.collectAsState(false)
+    val imageScale by animateFloatAsState(
+        targetValue = if (inCar) {
+            1f
+        } else {
+            3f
+        }
+    )
     val pos by passenger.pos.collectAsState()
     Image(
         bitmap = ImageCache.loadResource("passenger.png"),
         colorFilter = ColorFilter.tint(
-            color = Color.Blue
+            color = tintColor
         ),
         contentDescription = "passenger",
         modifier = Modifier.absoluteOffset(
-            // TODO food size
-            x = (pos.x * SCALE).dp - PASSENGER_SIZE_DP,
-            y = (pos.y * SCALE).dp - PASSENGER_SIZE_DP
+            x = (pos.x * displayConfig.current.scale).dp - displayConfig.current.passengerSizeDp,
+            y = (pos.y * displayConfig.current.scale).dp - displayConfig.current.passengerSizeDp
+        ).scale(
+            imageScale
         ),
+
     )
 }
 
@@ -298,8 +338,8 @@ fun CarUI(
         bitmap = ImageCache.loadResource("car.png"),
         contentDescription = "car",
         modifier = Modifier.absoluteOffset(
-            x = (pos.col * SCALE).dp - CAR_SIZE_DP,
-            y = (pos.row * SCALE).dp - CAR_SIZE_DP
+            x = (pos.col * displayConfig.current.scale).dp - displayConfig.current.carSizeDp,
+            y = (pos.row * displayConfig.current.scale).dp - displayConfig.current.carSizeDp
         ).rotate(
             rotation
         )
@@ -315,7 +355,7 @@ fun TileUI(
 ) {
     val content by tile.content.collectAsState()
     Box(
-        modifier = modifier.size(TILE_SIZE_DP).clickable {
+        modifier = modifier.size(displayConfig.current.tileSizeDp).clickable {
             onClickHandler(tile)
         }
     ) {
@@ -342,7 +382,6 @@ fun TileUI(
                 contentDescription = "taxi station"
             )
         }
-
     }
 }
 

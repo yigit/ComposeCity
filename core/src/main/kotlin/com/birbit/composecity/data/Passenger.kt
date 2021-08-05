@@ -6,10 +6,12 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlin.time.Duration
 import kotlin.time.ExperimentalTime
 
-class Passenger(
+@OptIn(ExperimentalTime::class)
+class Passenger constructor(
     val id: Id,
     pos: Pos,
     val target: Tile,
+    val creationTime: Duration,
     car: Car? = null
 ) {
     val initialPos = pos
@@ -22,6 +24,11 @@ class Passenger(
     val car: StateFlow<Car?>
         get() = _car
 
+    private val _mood = MutableStateFlow<Mood>(Mood.NEW)
+
+    val mood: StateFlow<Mood>
+        get() = _mood
+
     fun setCar(car: Car?) {
         _car.value = car
     }
@@ -31,5 +38,16 @@ class Passenger(
         _car.value?.let {
             _pos.value = it.pos.value
         }
+    }
+
+    fun setMood(mood: Mood) {
+        _mood.value = mood
+    }
+
+    enum class Mood {
+        NEW,
+        OK,
+        GETTING_UPSET,
+        UPSET
     }
 }

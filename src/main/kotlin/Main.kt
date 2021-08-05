@@ -28,7 +28,11 @@ private class GameController {
     val mainMenuCallbacks = object : MainMenuCallbacks {
         override fun onNewGame() {
             val gameLoop = GameLoop(
-                player = Player(1000),
+                player = Player(
+                    initialMoney = 1000,
+                    deliveredPassengers = 0,
+                    missedPassengers = 0
+                ),
                 city = City(
                     map = CityMap(width = 30, height = 20)
                 ),
