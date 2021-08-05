@@ -31,9 +31,7 @@ private class AddBusinessEvent: AIEventWithResult<Duration?>() {
             val row = aiRand.nextInt(city.map.height)
             val col = aiRand.nextInt(city.map.width)
             val tile = city.map.tiles.get(row = row, col = col)
-            if (tile.contentValue == TileContent.Grass) {
-                // TODO businesses should be cached in City
-                tile.contentValue = TileContent.Business
+            if (city.addBusiness(tile)) {
                 return gameLoop.gameTime.now.value
             }
         }
@@ -54,21 +52,18 @@ private class SetPassengerMoodIfNotOnCar(
         }
         passenger.setMood(mood)
     }
-
 }
 
 private class AddPassengerEvent: AIEventWithResult<Duration?>() {
     override fun doApply(gameLoop: GameLoop, city: City): Duration? {
-        val businessTiles = city.map.tiles.data.filter {
-            it.contentValue == TileContent.Business
-        }
+        val businessTiles = city.businessTiles
         if(businessTiles.isEmpty()) return null
         val targetBusiness = businessTiles[aiRand.nextInt(businessTiles.size)]
         repeat(10) {
             val row = aiRand.nextInt(city.map.height)
             val col = aiRand.nextInt(city.map.width)
             val tile = city.map.tiles.get(row = row, col = col)
-            if (tile.contentValue != TileContent.Business) {
+            if (tile.content.value != TileContent.Business) {
                 city.addPassenger(
                     Passenger(
                         id = city.idGenerator.nextId(),

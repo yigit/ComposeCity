@@ -23,7 +23,7 @@ class AddCarToStationEvent(
     val tile: Tile
 ) : Event {
     override fun apply(gameLoop: GameLoop, city: City) {
-        if (tile.contentValue == TileContent.TaxiStation) {
+        if (tile.content.value == TileContent.TaxiStation) {
             gameLoop.player.deductMoney(
                 Player.COST_OF_CAR
             ) {
@@ -51,40 +51,12 @@ class CompositeEvent(
 
 }
 
-// TODO need to be able to get result from this
-class CreateBusinessEvent(
-    private val tile: Tile
-) : Event {
-    override fun apply(gameLoop: GameLoop, city: City) {
-        if (tile.contentValue == TileContent.Grass) {
-            tile.contentValue = TileContent.Business
-        }
-    }
-}
-
-class ToggleBusinessEvent(
-    private val tile: Tile
-) : Event {
-    override fun apply(gameLoop: GameLoop, city: City) {
-        if (tile.contentValue == TileContent.Business) {
-            tile.contentValue = TileContent.Grass
-        } else {
-            tile.contentValue = TileContent.Business
-        }
-    }
-}
-
 class ToggleTileEvent(
     private val tile: Tile
 ) : Event {
     override fun apply(gameLoop: GameLoop, city: City) {
-        if (tile.contentValue == TileContent.Grass) {
-            gameLoop.player.deductMoney(Player.COST_OF_ROAD) {
-                tile.contentValue = TileContent.Road
-            }
-        } else if (tile.contentValue == TileContent.Road) {
-            tile.contentValue = TileContent.Grass
-        }
+        // TODO it is ugly that we are passing player here... need to find a better way
+        city.toggleTile(gameLoop.player, tile)
     }
 }
 
@@ -105,19 +77,7 @@ class AddTaxiStationEvent(
     private val tile: Tile
 ): Event {
     override fun apply(gameLoop: GameLoop, city: City) {
-        if (tile.contentValue != TileContent.Grass) {
-            return
-        }
-        gameLoop.player.deductMoney(Player.COST_OF_TAXI_STATION) {
-            tile.contentValue = TileContent.TaxiStation
-            val newCar = Car(
-                id = city.idGenerator.nextId(),
-                initialPos = tile.center,
-                taxiStation = tile
-            )
-            city.addCar(newCar)
-        }
-
+        city.addTaxiStation(gameLoop.player, tile)
     }
 }
 

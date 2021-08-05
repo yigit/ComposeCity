@@ -130,7 +130,7 @@ class LoadSave(
                 width = this.map.width,
                 height = this.map.height,
                 tiles = this.map.tiles.data.map {
-                    it.contentValue.id
+                    it.content.value.id
                 },
                 passengers = this.passengers.value.map {
                     it.toSerialized()
@@ -196,7 +196,7 @@ class LoadSave(
                 TileContent.fromId(it)
             }
             val city = City(
-                map = CityMap(
+                map = CityMapImpl(
                     width = width,
                     height = height,
                     content = mapData

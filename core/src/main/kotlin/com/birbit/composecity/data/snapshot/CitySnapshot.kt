@@ -14,6 +14,8 @@ class CitySnapshot(
     val cars: List<CarSnapshot>
     val availablePassengers: List<PassengerSnapshot>
     val now = gameLoop.gameTime.now.value
+    val businessTiles = city.businessTiles
+
     val hasAvailablePassengers
         get() = availablePassengers.isNotEmpty()
     init {
@@ -22,7 +24,7 @@ class CitySnapshot(
         val gridData = city.map.tiles.data.map {
             TileSnapshot(
                 tile = it,
-                _passangers = mutableListOf(),
+                _passengers = mutableListOf(),
                 _cars = mutableListOf()
             )
         }
@@ -65,7 +67,7 @@ class CitySnapshot(
                     pos = it.pos.value,
                     target = grid.findClosest(it.pos.value)
                 ).also {
-                    grid.findClosest(it.pos)._passangers.add(it)
+                    grid.findClosest(it.pos)._passengers.add(it)
                 }
             } else {
                 null
@@ -75,11 +77,11 @@ class CitySnapshot(
 
     data class TileSnapshot(
         private val tile: Tile,
-        val content: TileContent = tile.contentValue,
-        internal val _passangers: MutableList<PassengerSnapshot>,
+        val content: TileContent = tile.content.value,
+        internal val _passengers: MutableList<PassengerSnapshot>,
         internal val _cars: MutableList<CarSnapshot>
     ) {
-        fun hasPassanger() = _passangers.isNotEmpty()
+        fun hasPassanger() = _passengers.isNotEmpty()
 
         val row
             get() = tile.row
@@ -88,7 +90,7 @@ class CitySnapshot(
         val center
             get() = tile.center
         val passangers: List<PassengerSnapshot>
-            get() = _passangers
+            get() = _passengers
         val cars: List<CarSnapshot>
             get() = _cars
     }

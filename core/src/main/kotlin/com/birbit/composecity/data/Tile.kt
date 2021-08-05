@@ -3,23 +3,26 @@ package com.birbit.composecity.data
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
-data class Tile(
-    val row:Int,
-    val col:Int
-) {
-    private val _content = MutableStateFlow<TileContent>(
+interface Tile {
+    val row: Int
+    val col: Int
+    val content: StateFlow<TileContent>
+    val center: Pos
+}
+
+interface MutableTile: Tile {
+    override val content: MutableStateFlow<TileContent>
+}
+
+data class TileImpl(
+    override val row:Int,
+    override val col:Int
+) : MutableTile {
+    override val content = MutableStateFlow<TileContent>(
         TileContent.Grass
     )
-    val content: StateFlow<TileContent>
-        get() = _content
 
-    var contentValue: TileContent
-        get() = _content.value
-        set(value) {
-            _content.value = value
-        }
-
-    val center: Pos = createPos(
+    override val center: Pos = createPos(
         row = row.toFloat() * CityMap.TILE_SIZE + CityMap.TILE_SIZE / 2,
         col = col.toFloat() * CityMap.TILE_SIZE + CityMap.TILE_SIZE / 2
     )

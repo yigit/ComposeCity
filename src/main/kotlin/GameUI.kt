@@ -56,8 +56,6 @@ fun GameUI(gameLoop: GameLoop, onExit: () -> Unit) {
                 gameLoop.addEvent(ToggleTileEvent(tile))
             } else if (uiControls.modeValue == Mode.ADD_CAR) {
                 gameLoop.addEvent(AddCarToStationEvent(tile))
-            } else if (uiControls.modeValue == Mode.ADD_BUSINESS) {
-                gameLoop.addEvent(CreateBusinessEvent(tile))
             } else if (uiControls.modeValue == Mode.ADD_TAXI_STATION) {
                 gameLoop.addEvent(AddTaxiStationEvent(tile))
             }
@@ -206,7 +204,7 @@ fun ControlsUI(
             },
             enabled = true,
             label = {
-                Text("add business")
+                Text("add car")
             }
         )
         BottomNavigationItem(
@@ -307,7 +305,7 @@ fun PassangerUI(
         targetValue = if (inCar) {
             1f
         } else {
-            3f
+            2f
         }
     )
     val pos by passenger.pos.collectAsState()
