@@ -36,7 +36,7 @@ fun GameUI(gameLoop: GameLoop, onExit: () -> Unit) {
         override fun onExit() {
             onExit()
         }
-        
+
         override fun onTaxiMenuClick() {
             uiControls.toggleMode(Mode.ADD_TAXI_STATION)
         }
@@ -83,7 +83,6 @@ fun GameUI(gameLoop: GameLoop, onExit: () -> Unit) {
                 gameTime = gameLoop.gameTime
             )
         }
-
     }
 }
 
@@ -232,9 +231,6 @@ fun ControlsUI(
     }
 }
 
-val timeFormat = DecimalFormat("$$")
-
-
 @Composable
 fun CityMapUI(
     city: City,
@@ -243,18 +239,23 @@ fun CityMapUI(
     val cityMap = city.map
     val currentCars by city.cars.collectAsState()
     val currentFood by city.passengers.collectAsState()
-    Box {
-        Column {
-            repeat(cityMap.height) { row ->
-                Row {
-                    repeat(cityMap.width) { col ->
-                        TileUI(
-                            cityMap,
-                            cityMap.tiles.get(row = row, col = col),
-                            controlCallbacks::onTileClick
-                        )
-                    }
-                }
+    Box(
+        modifier = Modifier.size(
+            width = TILE_SIZE_DP.times(cityMap.width),
+            height = TILE_SIZE_DP.times(cityMap.height)
+        )
+    ) {
+        repeat(cityMap.height) { row ->
+            repeat(cityMap.width) { col ->
+                TileUI(
+                    cityMap = cityMap,
+                    tile = cityMap.tiles.get(row = row, col = col),
+                    modifier = Modifier.absoluteOffset(
+                        x = TILE_SIZE_DP.times(col),
+                        y = TILE_SIZE_DP.times(row)
+                    ),
+                    controlCallbacks::onTileClick
+                )
             }
         }
         currentCars.forEach {
@@ -309,11 +310,12 @@ fun CarUI(
 fun TileUI(
     cityMap: CityMap,
     tile: Tile,
+    modifier: Modifier = Modifier,
     onClickHandler: (Tile) -> Unit
 ) {
     val content by tile.content.collectAsState()
     Box(
-        modifier = Modifier.size(TILE_SIZE_DP).clickable {
+        modifier = modifier.size(TILE_SIZE_DP).clickable {
             onClickHandler(tile)
         }
     ) {

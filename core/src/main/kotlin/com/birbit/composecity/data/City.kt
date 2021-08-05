@@ -5,6 +5,10 @@ import com.birbit.composecity.IdGenerator
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
+/**
+ * TODO: what would help us clean things is that we would have two interfaces of each class one of which provides
+ * mutability such that we can enclose mutations.
+ */
 class City(
     val map: CityMap,
     startId: Id = Id(0)
