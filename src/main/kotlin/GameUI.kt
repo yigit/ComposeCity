@@ -372,9 +372,13 @@ fun TileUI(
                 ),
                 contentDescription = "road",
             )
-            TileContent.OutOfBounds -> {
-                // nada
-            }
+            TileContent.House -> Image(
+                bitmap = ImageCache.loadResource("house.png"),
+                colorFilter = ColorFilter.tint(
+                    color = Color.Red,
+                ),
+                contentDescription = "house"
+            )
             TileContent.TaxiStation -> Image(
                 bitmap = ImageCache.loadResource("taxi-station.png"),
                 contentDescription = "taxi station"
@@ -383,7 +387,7 @@ fun TileUI(
     }
 }
 
-private val baseState = MutableStateFlow(TileContent.OutOfBounds)
+private val baseState = MutableStateFlow(TileContent.Grass)
 private fun TileContent.roadMask(shift: Int) = if (isRoad()) {
     1.shl(shift)
 } else {

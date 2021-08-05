@@ -21,6 +21,11 @@ class City(
     }
         private set
 
+    internal var houseTiles: List<Tile> = map.tiles.data.filter {
+        it.content.value == TileContent.House
+    }
+        private set
+
     internal val idGenerator: IdGenerator = IdGenerator(startId)
     private val _cars = MutableStateFlow<List<Car>>(emptyList())
     private val _passengers = MutableStateFlow<List<Passenger>>(emptyList())
@@ -42,6 +47,16 @@ class City(
         if (mutableTile.content.value == TileContent.Grass) {
             mutableTile.content.value = TileContent.Business
             businessTiles = businessTiles + tile
+            return true
+        }
+        return false
+    }
+
+    fun addHouse(tile: Tile): Boolean {
+        val mutableTile = _map.mutableTiles.get(row = tile.row, col = tile.col)
+        if (mutableTile.content.value == TileContent.Grass) {
+            mutableTile.content.value = TileContent.House
+            houseTiles = houseTiles + mutableTile
             return true
         }
         return false

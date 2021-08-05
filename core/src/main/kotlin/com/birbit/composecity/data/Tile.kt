@@ -30,36 +30,19 @@ data class TileImpl(
     override fun toString() = "Tile[$row/$col]"
 }
 
-sealed class TileContent(
-    val id:Int
+enum class TileContent(
+    val id:Int,
+    val canCarGo: Boolean
 ) {
-    open fun canCarGo(): Boolean = false
+    Grass(id = 1, canCarGo = false),
+    Road(id = 2, canCarGo = true),
+    Business(id = 3, canCarGo = false),
+    TaxiStation(id = 4, canCarGo = false), // only taxis that were housed here can go
+    House(id = 5, canCarGo = false);
+    fun canCarGo(): Boolean = canCarGo
 
-    object Grass : TileContent(1) {
-        override fun toString() = "Grass"
-    }
-    object Road : TileContent(2) {
-        override fun canCarGo() = true
-        override fun toString() = "Road"
-    }
-    object OutOfBounds: TileContent(3) {
-        override fun toString() = "out of bounds"
-    }
-    object Business: TileContent(4) {
-        override fun toString() = "business"
-    }
-    object TaxiStation : TileContent(5) {
-        override fun toString() = "taxi station"
-    }
     companion object {
-        fun fromId(id:Int) = when(id) {
-            1 -> Grass
-            2 -> Road
-            3 -> OutOfBounds
-            4 -> Business
-            5 -> TaxiStation
-            else -> error("invalid tile id: $id")
-        }
+        private val byId = values().associateBy { it.id }
+        fun fromId(id:Int) = byId[id] ?: error("invalid tile id: $id")
     }
-
 }

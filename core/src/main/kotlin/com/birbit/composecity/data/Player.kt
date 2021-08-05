@@ -40,14 +40,13 @@ class Player(
             _money.value -= cost
             _pendingDistance -= FUEL_COST_BUCKET * cost
         }
-
     }
 
     private fun computeDeliveryFee(passenger: Passenger): Int {
         val distance = passenger.initialPos.dist(passenger.pos.value) / 10
         val tip = when(passenger.mood.value) {
-            Passenger.Mood.NEW -> 100
-            Passenger.Mood.OK -> 30
+            Passenger.Mood.NEW -> 10
+            Passenger.Mood.OK -> 3
             else -> 0
         }
         return TRIP_BASE_COST + tip + distance.roundToInt().coerceAtLeast(1)
@@ -75,7 +74,7 @@ class Player(
         const val COST_OF_TAXI_STATION = 750
         const val COST_OF_ROAD = 5
         const val COST_OF_CAR = 100
-        const val FAILED_PASSENGER_PENALTY = 20
+        const val FAILED_PASSENGER_PENALTY = 80
     }
 
 }

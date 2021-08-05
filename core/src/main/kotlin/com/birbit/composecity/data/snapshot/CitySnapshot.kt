@@ -14,7 +14,8 @@ class CitySnapshot(
     val cars: List<CarSnapshot>
     val availablePassengers: List<PassengerSnapshot>
     val now = gameLoop.gameTime.now.value
-    val businessTiles = city.businessTiles
+    val businessTiles: List<TileSnapshot>
+    val houseTiles: List<TileSnapshot>
 
     val hasAvailablePassengers
         get() = availablePassengers.isNotEmpty()
@@ -34,6 +35,13 @@ class CitySnapshot(
             unitSize = CityMap.TILE_SIZE,
             data = gridData
         )
+        houseTiles = city.houseTiles.map {
+            grid.get(row = it.row, col = it.col)
+        }
+
+        businessTiles = city.businessTiles.map {
+            grid.get(row = it.row, col = it.col)
+        }
 
         cars = city.cars.value.map { car ->
             val carSnapshot = CarSnapshot(

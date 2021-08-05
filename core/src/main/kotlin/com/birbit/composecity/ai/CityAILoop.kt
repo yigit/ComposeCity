@@ -13,16 +13,22 @@ import kotlin.time.Duration
 import kotlin.time.ExperimentalTime
 
 
+// TODO some weighted selection logic here would be nice where businesses like being close to businesses
+//  whereas homes like being away from other businesses, slightly closer to other homes though.
 private val aiRand = Random(System.nanoTime())
 
+private val VALID_TILES_FOR_NEW_PASSENGERS = listOf(
+    TileContent.Road,
+    TileContent.Grass
+)
 private fun <R> randomTile(
     gameLoop: GameLoop,
     city: City,
     tryExecutor: (tile: Tile) -> R?
 ): R? {
     val now = gameLoop.gameTime.now.value
-    // expand from the left top
-    val maxRange = 5 + now.inWholeHours.toInt()
+    // expand from the left top, or not??
+    val maxRange = 1000//5 + now.inWholeHours.toInt()
     repeat(10) {
         val row = aiRand.nextInt(minOf(maxRange + it, city.map.height))
         val col = aiRand.nextInt(minOf(maxRange + it, city.map.width))
@@ -42,6 +48,18 @@ private abstract class AIEventWithResult<T> : Event {
         _result.complete(doApply(gameLoop, city))
     }
     abstract fun doApply(gameLoop: GameLoop, city: City): T
+}
+
+private class AddHomeEvent: AIEventWithResult<Duration?>() {
+    override fun doApply(gameLoop: GameLoop, city: City): Duration? {
+        return randomTile(gameLoop, city) {
+            if (city.addHouse(it)) {
+                gameLoop.gameTime.now.value
+            } else {
+                null
+            }
+        }
+    }
 }
 
 private class AddBusinessEvent: AIEventWithResult<Duration?>() {
@@ -71,26 +89,30 @@ private class SetPassengerMoodIfNotOnCar(
     }
 }
 
-private class AddPassengerEvent: AIEventWithResult<Duration?>() {
+private class AddPassengerEvent(
+    val row:Int,
+    val col:Int
+): AIEventWithResult<Duration?>() {
     override fun doApply(gameLoop: GameLoop, city: City): Duration? {
         val businessTiles = city.businessTiles
         if(businessTiles.isEmpty()) return null
         val targetBusiness = businessTiles[aiRand.nextInt(businessTiles.size)]
-        return randomTile(gameLoop, city) { tile ->
-            if (tile.content.value != TileContent.Business) {
-                city.addPassenger(
-                    Passenger(
-                        id = city.idGenerator.nextId(),
-                        pos = tile.center,
-                        target = targetBusiness,
-                        creationTime = gameLoop.gameTime.now.value
-                    )
-                )
-                gameLoop.gameTime.now.value
-            } else {
-                null
-            }
+        val tile = city.map.tiles.get(
+            row = row,
+            col = col
+        )
+        if (tile.content.value !in VALID_TILES_FOR_NEW_PASSENGERS) {
+            return null
         }
+        city.addPassenger(
+            Passenger(
+                id = city.idGenerator.nextId(),
+                pos = tile.center,
+                target = targetBusiness,
+                creationTime = gameLoop.gameTime.now.value
+            )
+        )
+        return gameLoop.gameTime.now.value
     }
 }
 
@@ -104,13 +126,13 @@ private class RemoveUpsetPassenger(
         gameLoop.player.onMissedPassenger(passenger)
         city.removeUnpickedPassenger(passenger)
     }
-
 }
 
 // TODO gotta save what this did as well so that between load / save, it won't go bananas
 class CityAILoop(
     lastAddedPassengerTime: Duration = Duration.ZERO,
     lastAddedBusinessTime: Duration = Duration.ZERO,
+    lastAddedHouseTime: Duration = Duration.ZERO,
     private val config: Config = Config()
 ) {
     private val addBusinessConstraint = DurationConstraint(
@@ -118,35 +140,83 @@ class CityAILoop(
         max = config.maxTimeBetweenNewBusinesses,
         lastAction = lastAddedBusinessTime
     )
-    private val addPassengerConstraint = DurationConstraint(
-        min = config.minTimeBetweenNewPassengers,
-        max = config.maxTimeBetweenNewPassengers,
-        lastAction = lastAddedPassengerTime
+    // passenger creation constraint per home
+    private val housePassengerConstraints: MutableMap<
+            Pair<Int, Int>, DurationConstraint> = mutableMapOf()
+
+    private fun passengerCreationConstraintForHome(
+        homeTile: CitySnapshot.TileSnapshot
+    ): DurationConstraint {
+        return housePassengerConstraints.getOrPut(
+            homeTile.row to homeTile.col
+        ) {
+            DurationConstraint(
+                min = config.minTimeBetweenNewPassengers,
+                max = config.maxTimeBetweenNewPassengers,
+                lastAction = Duration.ZERO // TODO this should be saved
+            )
+        }
+    }
+    private val addHouseConstraint = DurationConstraint(
+        min = config.minTimeBetweenNewHomes,
+        max = config.maxTimeBetweenNewHomes,
+        lastAction = lastAddedHouseTime
     )
     internal fun doAILoop(
         citySnapshot: CitySnapshot
     ): Event {
         val businessEvent = handleBusinessCreation(citySnapshot)
+        val houseEvent = handleHouseCreation(citySnapshot)
         val passengerEvent = handlePassengerCreation(citySnapshot)
         val passengerEvents = handlePassengerMoods(citySnapshot)
         val leavingPassengers = handlePassengerLeave(citySnapshot)
         return CompositeEvent(
-            listOfNotNull(businessEvent, passengerEvent, passengerEvents, leavingPassengers)
+            listOfNotNull(businessEvent, houseEvent, passengerEvent, passengerEvents, leavingPassengers)
         )
     }
 
     private fun handlePassengerCreation(citySnapshot: CitySnapshot): Event? {
-        return addPassengerConstraint.considerExecution(
-            now = citySnapshot.now
-        ) {
-            AddPassengerEvent()
+        val passengerTiles = citySnapshot.availablePassengers.mapTo(mutableSetOf()) {
+            citySnapshot.grid.findClosest(it.pos)
         }
+
+        val events = citySnapshot.houseTiles.mapNotNull {
+            val constraint = passengerCreationConstraintForHome(it)
+            constraint.considerExecution(citySnapshot.now) {
+                val (goodChoice, badChoice) = citySnapshot.grid.neighborsOf(it.center).partition {
+                    it.content == TileContent.Road && !passengerTiles.contains(it)
+                }
+                val candidateTiles = if (goodChoice.isNotEmpty()) {
+                    goodChoice
+                } else {
+                    badChoice
+                }
+                if (candidateTiles.isEmpty()) {
+                    null
+                } else {
+                    val tile = candidateTiles[aiRand.nextInt(candidateTiles.size)]
+                    AddPassengerEvent(row = tile.row, col = tile.col)
+                }
+            }
+        }
+        if (events.isEmpty()) {
+            return null
+        }
+        return CompositeEvent(events)
     }
     private fun handleBusinessCreation(citySnapshot: CitySnapshot): Event? {
         return addBusinessConstraint.considerExecution(
             now = citySnapshot.now
         ) {
             AddBusinessEvent()
+        }
+    }
+
+    private fun handleHouseCreation(citySnapshot: CitySnapshot): Event? {
+        return addHouseConstraint.considerExecution(
+            now = citySnapshot.now
+        ) {
+            AddHomeEvent()
         }
     }
 
@@ -196,6 +266,9 @@ class CityAILoop(
         val minTimeBetweenNewBusinesses: Duration = Duration.hours(8),
         val maxTimeBetweenNewBusinesses: Duration = Duration.days(1),
 
+        val minTimeBetweenNewHomes: Duration = Duration.hours(4),
+        val maxTimeBetweenNewHomes: Duration = Duration.days(1),
+
         val maxPassengerWaitDuration: Duration = Duration.hours(6),
 
         val expectedPassengerMood : (waitingTime: Duration) -> Passenger.Mood = { waitingTime ->
@@ -217,7 +290,7 @@ class CityAILoop(
         val min = min.inWholeMinutes
         val max = max.inWholeMinutes
         var pendingEvent: AIEventWithResult<Duration?>? = null
-        fun considerExecution(now: Duration, create : () -> AIEventWithResult<Duration?>): Event? {
+        fun considerExecution(now: Duration, create : () -> AIEventWithResult<Duration?>?): Event? {
             val pending = pendingEvent
             if (pending != null) {
                 // TODO we could instead await here but that might block other AI stuff so better skip
@@ -238,7 +311,7 @@ class CityAILoop(
             if (!shouldCreate) {
                 return null
             }
-            val event = create()
+            val event = create() ?: return null
             pendingEvent = event
             return event
         }
