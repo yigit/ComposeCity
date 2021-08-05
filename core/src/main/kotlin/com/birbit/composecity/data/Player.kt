@@ -30,6 +30,7 @@ class Player(
 
     fun onMissedPassenger(passenger: Passenger) {
         _missedPassengers.value += 1
+        deductFailedPassengerPenalty()
     }
 
     fun onDistanceTraveledByCars(distance: Float) {
@@ -44,7 +45,16 @@ class Player(
 
     private fun computeDeliveryFee(passenger: Passenger): Int {
         val distance = passenger.initialPos.dist(passenger.pos.value) / 10
-        return TRIP_BASE_COST + distance.roundToInt().coerceAtLeast(1)
+        val tip = when(passenger.mood.value) {
+            Passenger.Mood.NEW -> 100
+            Passenger.Mood.OK -> 30
+            else -> 0
+        }
+        return TRIP_BASE_COST + tip + distance.roundToInt().coerceAtLeast(1)
+    }
+
+    fun deductFailedPassengerPenalty() {
+        _money.value -= FAILED_PASSENGER_PENALTY
     }
 
     fun deductMoney(
@@ -65,6 +75,7 @@ class Player(
         const val COST_OF_TAXI_STATION = 750
         const val COST_OF_ROAD = 5
         const val COST_OF_CAR = 100
+        const val FAILED_PASSENGER_PENALTY = 20
     }
 
 }
