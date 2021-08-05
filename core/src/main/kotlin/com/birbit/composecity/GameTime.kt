@@ -21,7 +21,7 @@ class SetGameSpeedEvent(
 class GameTime(
     startTime: Duration = START_TIME
 ) {
-    private val _now = MutableStateFlow(START_TIME)
+    private val _now = MutableStateFlow(startTime)
     val passedTIme = _now.map {
         it - START_TIME
     }

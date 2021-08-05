@@ -37,14 +37,12 @@ class CitySnapshot(
 
         cars = city.cars.value.map { car ->
             val carSnapshot = CarSnapshot(
-                car = car,
-                passenger = car.passenger?.let {
-                    PassengerSnapshot(
-                        id = it.id,
-                        creationTime = it.creationTime,
-                        mood = it.mood.value,
-                        pos = it.pos.value,
-                        target = grid.findClosest(it.target.center)
+                carId = car.id,
+                pos = car.pos.value,
+                passengerTarget = car.passenger?.target?.let { passengerTarget ->
+                    grid.get(
+                        row = passengerTarget.row,
+                        col = passengerTarget.col
                     )
                 },
                 taxiStation = grid.get(
@@ -96,11 +94,13 @@ class CitySnapshot(
     }
 
     class CarSnapshot(
-        internal val car: Car,
-        val pos: Pos = car.pos.value,
-        val passenger: PassengerSnapshot? = null,
+        val carId: Id,
+        val pos: Pos,
+        val passengerTarget: TileSnapshot?,
         val taxiStation: TileSnapshot
-    )
+    ) {
+
+    }
 
     @OptIn(ExperimentalTime::class)
     class PassengerSnapshot(

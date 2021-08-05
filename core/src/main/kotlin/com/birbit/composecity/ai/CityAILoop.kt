@@ -15,6 +15,25 @@ import kotlin.time.ExperimentalTime
 
 private val aiRand = Random(System.nanoTime())
 
+private fun <R> randomTile(
+    gameLoop: GameLoop,
+    city: City,
+    tryExecutor: (tile: Tile) -> R?
+): R? {
+    val now = gameLoop.gameTime.now.value
+    // expand from the left top
+    val maxRange = 5 + now.inWholeHours.toInt()
+    repeat(10) {
+        val row = aiRand.nextInt(minOf(maxRange + it, city.map.height))
+        val col = aiRand.nextInt(minOf(maxRange + it, city.map.width))
+        val tile = city.map.tiles.get(row = row, col = col)
+        tryExecutor(tile)?.let {
+            return it
+        }
+    }
+    return null
+}
+
 private abstract class AIEventWithResult<T> : Event {
     private val _result: CompletableDeferred<T> = CompletableDeferred()
     val result: Deferred<T>
@@ -27,15 +46,13 @@ private abstract class AIEventWithResult<T> : Event {
 
 private class AddBusinessEvent: AIEventWithResult<Duration?>() {
     override fun doApply(gameLoop: GameLoop, city: City): Duration? {
-        repeat(10) {
-            val row = aiRand.nextInt(city.map.height)
-            val col = aiRand.nextInt(city.map.width)
-            val tile = city.map.tiles.get(row = row, col = col)
-            if (city.addBusiness(tile)) {
-                return gameLoop.gameTime.now.value
+        return randomTile(gameLoop, city) {
+            if (city.addBusiness(it)) {
+                gameLoop.gameTime.now.value
+            } else {
+                null
             }
         }
-        return null
     }
 }
 
@@ -59,10 +76,7 @@ private class AddPassengerEvent: AIEventWithResult<Duration?>() {
         val businessTiles = city.businessTiles
         if(businessTiles.isEmpty()) return null
         val targetBusiness = businessTiles[aiRand.nextInt(businessTiles.size)]
-        repeat(10) {
-            val row = aiRand.nextInt(city.map.height)
-            val col = aiRand.nextInt(city.map.width)
-            val tile = city.map.tiles.get(row = row, col = col)
+        return randomTile(gameLoop, city) { tile ->
             if (tile.content.value != TileContent.Business) {
                 city.addPassenger(
                     Passenger(
@@ -72,10 +86,11 @@ private class AddPassengerEvent: AIEventWithResult<Duration?>() {
                         creationTime = gameLoop.gameTime.now.value
                     )
                 )
-                return gameLoop.gameTime.now.value
+                gameLoop.gameTime.now.value
+            } else {
+                null
             }
         }
-        return null
     }
 }
 
@@ -178,8 +193,8 @@ class CityAILoop(
         val minTimeBetweenNewPassengers: Duration = Duration.hours(1),
         val maxTimeBetweenNewPassengers: Duration = Duration.hours(2),
 
-        val minTimeBetweenNewBusinesses: Duration = Duration.days(1),
-        val maxTimeBetweenNewBusinesses: Duration = Duration.days(2),
+        val minTimeBetweenNewBusinesses: Duration = Duration.hours(8),
+        val maxTimeBetweenNewBusinesses: Duration = Duration.days(1),
 
         val maxPassengerWaitDuration: Duration = Duration.hours(6),
 

@@ -35,17 +35,16 @@ class CarAILoop {
         queue: FairSharedQueue<CitySnapshot.TileSnapshot, List<CitySnapshot.TileSnapshot>?>
     ): Event {
         val closestTile = citySnapshot.grid.findClosest(pos)
-        val passenger = this.passenger
 
-        var path = if(passenger != null) {
+        var path = if(passengerTarget != null) {
             citySnapshot.findPathParallel(
                 queue =queue,
                 start = closestTile,
                 canVisit = {
-                    it.content.canCarGo() || it == passenger.target
+                    it.content.canCarGo() || it == passengerTarget
                 },
                 isTarget = {
-                    it == passenger.target
+                    it == passengerTarget
                 }
             )
         } else {
@@ -80,10 +79,10 @@ class CarAILoop {
         }
         return path?.let {
             SetPathEvent(
-                car = this.car,
+                carId = this.carId,
                 path = it
             )
-        } ?: ClearPathEvent(car)
+        } ?: ClearPathEvent(carId = carId)
     }
 
     private var CitySnapshot.reservedTiles: List<CitySnapshot.TileSnapshot>

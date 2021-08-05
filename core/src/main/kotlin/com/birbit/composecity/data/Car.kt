@@ -5,6 +5,7 @@ import com.birbit.composecity.data.snapshot.CitySnapshot
 import com.curiouscreature.kotlin.math.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.firstOrNull
 import kotlin.math.atan2
 import kotlin.time.Duration
 import kotlin.time.ExperimentalTime
@@ -91,20 +92,26 @@ class Car(
 }
 
 class ClearPathEvent(
-    val car: Car
+    private val carId: Id
 ) : Event {
     override fun apply(gameLoop: GameLoop, city: City) {
+        val car = city.cars.value.firstOrNull {
+            it.id == carId
+        } ?: return
         car.targetPath = null
     }
 }
 
 class SetPathEvent(
-    val car: Car,
+    val carId: Id,
     val path: List<CitySnapshot.TileSnapshot>
 ) : Event {
     override fun apply(gameLoop: GameLoop, city: City) {
         // TODO set this more cleverly because our car might've moved closer to the next path points if AI took a long
         //  time
+        val car = city.cars.value.firstOrNull {
+            it.id == carId
+        } ?: return
         car.targetPath = Path(path.map {
             it.center
         })
