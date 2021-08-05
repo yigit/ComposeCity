@@ -5,15 +5,19 @@ import androidx.compose.desktop.DesktopMaterialTheme
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.focus.*
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.input.key.*
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -33,6 +37,7 @@ private data class DisplayConfig(
     val passengerSizeDp: Dp = tileSizeDp / 4,
 )
 
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun GameUI(gameLoop: GameLoop, onExit: () -> Unit) {
     val uiControls = GameUIControls()
@@ -72,8 +77,25 @@ fun GameUI(gameLoop: GameLoop, onExit: () -> Unit) {
         }
     }
     val player = gameLoop.player
+    val gameSpeed by gameLoop.gameTime.gameSpeed.collectAsState()
     DesktopMaterialTheme {
-        Column(modifier = Modifier.fillMaxSize(1f)) {
+        val focusRequester = remember { FocusRequester() }
+        Column(modifier = Modifier.fillMaxSize(1f)
+            .focusRequester(focusRequester)
+            .focusable(true)
+            .onKeyEvent {
+                if (it.key == Key.Spacebar && it.type == KeyEventType.KeyDown) {
+                    if (gameSpeed == GameTime.GameSpeed.PAUSED) {
+                        uiCallbacks.onSetGameSpeed(GameTime.GameSpeed.NORMAL)
+                    } else {
+                        uiCallbacks.onSetGameSpeed(GameTime.GameSpeed.PAUSED)
+                    }
+                }
+                false
+        }) {
+            LaunchedEffect(Unit) {
+                focusRequester.requestFocus()
+            }
             CityMapUI(city, uiCallbacks, modifier = Modifier.weight(1f))
             ControlsUI(
                 controls = uiControls,
@@ -233,6 +255,7 @@ fun ControlsUI(
 }
 
 private val displayConfig = compositionLocalOf<DisplayConfig> { error("No user found!") }
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun CityMapUI(
     city: City,

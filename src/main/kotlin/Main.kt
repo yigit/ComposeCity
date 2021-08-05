@@ -4,7 +4,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
@@ -59,6 +64,7 @@ private class GameController {
 
 private val gameController = GameController()
 
+@OptIn(ExperimentalComposeUiApi::class)
 fun main() = application{
     val windowState = rememberWindowState(width = Dp.Unspecified, height = Dp.Unspecified)
     Window(

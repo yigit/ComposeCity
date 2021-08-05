@@ -107,7 +107,6 @@ class GameLoop(
     private val aiDispatcher = Executors.newSingleThreadExecutor().asCoroutineDispatcher()
     private val aiScope = CoroutineScope(aiDispatcher + Job())
     private val gameScope = CoroutineScope(Dispatchers.Main + Job())
-
     init {
         start()
     }
