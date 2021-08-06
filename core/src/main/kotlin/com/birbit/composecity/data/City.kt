@@ -81,18 +81,19 @@ class City(
         _passengers.value -= passenger
     }
 
-    fun toggleTile(player: Player, tile: Tile) {
+    fun toggleTile(gameLoop: GameLoop, player: Player, tile: Tile) {
         val mutableTile = _map.mutableTiles.get(row = tile.row, col = tile.col)
         if (tile.content.value == TileContent.Grass) {
             player.deductMoney(Player.COST_OF_ROAD) {
                 mutableTile.content.value = TileContent.Road
+                gameLoop.addNotification(Notification.MoneyLost(amount = Player.COST_OF_ROAD, pos = tile.center))
             }
         } else if (mutableTile.content.value == TileContent.Road) {
             mutableTile.content.value = TileContent.Grass
         }
     }
 
-    fun addTaxiStation(player: Player, tile: Tile) {
+    fun addTaxiStation(gameLoop: GameLoop, player: Player, tile: Tile) {
         @Suppress("NAME_SHADOWING")
         val tile = _map.mutableTiles.get(row = tile.row, col = tile.col)
         if (tile.content.value != TileContent.Grass) {
@@ -106,6 +107,7 @@ class City(
                 taxiStation = tile
             )
             addCar(newCar)
+            gameLoop.addNotification(Notification.MoneyLost(amount = Player.COST_OF_TAXI_STATION, pos = tile.center))
         }
     }
 }

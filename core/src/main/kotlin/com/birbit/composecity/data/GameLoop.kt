@@ -34,6 +34,7 @@ class AddCarToStationEvent(
                         taxiStation = tile
                     )
                 )
+                gameLoop.addNotification(Notification.MoneyLost(amount = Player.COST_OF_CAR, pos = tile.center))
             }
         }
     }
@@ -56,7 +57,7 @@ class ToggleTileEvent(
 ) : Event {
     override fun apply(gameLoop: GameLoop, city: City) {
         // TODO it is ugly that we are passing player here... need to find a better way
-        city.toggleTile(gameLoop.player, tile)
+        city.toggleTile(gameLoop, gameLoop.player, tile)
     }
 }
 
@@ -77,7 +78,7 @@ class AddTaxiStationEvent(
     private val tile: Tile
 ): Event {
     override fun apply(gameLoop: GameLoop, city: City) {
-        city.addTaxiStation(gameLoop.player, tile)
+        city.addTaxiStation(gameLoop, gameLoop.player, tile)
     }
 }
 
