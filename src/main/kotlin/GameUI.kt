@@ -1,12 +1,12 @@
 // Copyright 2000-2021 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license that can be found in the LICENSE file.
-import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.*
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.desktop.DesktopMaterialTheme
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.ExperimentalComposeUiApi
@@ -19,12 +19,13 @@ import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.input.key.*
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.*
 import com.birbit.composecity.GameTime
 import com.birbit.composecity.SetGameSpeedEvent
 import com.birbit.composecity.ToggleStartStopGameEvent
 import com.birbit.composecity.data.*
+import com.birbit.composecity.data.CityMap.Companion.TILE_SIZE
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
 import java.util.*
@@ -105,14 +106,13 @@ fun GameUI(gameLoop: GameLoop, onExit: () -> Unit) {
             LaunchedEffect(Unit) {
                 focusRequester.requestFocus()
             }
-            CityMapUI(city, uiCallbacks, modifier = Modifier.weight(1f))
+            CityMapUI(gameLoop, city, uiCallbacks, modifier = Modifier.weight(1f))
             ControlsUI(
                 controls = uiControls,
                 callbacks = uiCallbacks,
                 player = player,
                 gameTime = gameLoop.gameTime
             )
-
         }
     }
 }
@@ -264,10 +264,11 @@ fun ControlsUI(
     }
 }
 
-private val displayConfig = compositionLocalOf<DisplayConfig> { error("No user found!") }
+private val displayConfig = compositionLocalOf<DisplayConfig> { error("cannot find display config!") }
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun CityMapUI(
+    gameLoop: GameLoop,
     city: City,
     controlCallbacks: ControlCallbacks,
     modifier: Modifier
@@ -312,6 +313,7 @@ fun CityMapUI(
             currentFood.forEach {
                 PassangerUI(it)
             }
+            NotificationsUI(gameLoop)
         }
     }
 }
@@ -359,6 +361,66 @@ fun PassangerUI(
 }
 
 @Composable
+fun NotificationsUI(
+    gameLoop: GameLoop
+) {
+    val notifications by gameLoop.notifications.collectAsState()
+    notifications.forEach { notification ->
+        when(notification) {
+            is Notification.MoneyMade -> MoneyChangeNotificationUI(
+                gameLoop = gameLoop,
+                notificationId = notification.id,
+                backgroundColor = MaterialTheme.colors.primary,
+                textColor = MaterialTheme.colors.onPrimary,
+                amount = notification.amount,
+                pos = notification.pos
+            )
+            is Notification.MoneyLost -> MoneyChangeNotificationUI(
+                gameLoop = gameLoop,
+                notificationId = notification.id,
+                backgroundColor = Color.Red,
+                textColor = Color.White,
+                amount = notification.amount,
+                pos = notification.pos
+            )
+        }
+    }
+}
+
+@Composable
+fun MoneyChangeNotificationUI(
+    gameLoop: GameLoop,
+    notificationId: String,
+    backgroundColor: Color,
+    textColor: Color,
+    pos: Pos,
+    amount: Int,
+) {
+    // TODO maybe use transition to also fade out?
+    val dy = remember {
+        androidx.compose.animation.core.Animatable(initialValue = 0f)
+    }
+    Card(
+        backgroundColor = backgroundColor,
+        elevation = 4.dp,
+        modifier = Modifier.absoluteOffset(
+            x = (pos.col * displayConfig.current.scale).dp,
+            y = ( (pos.row + dy.value) * displayConfig.current.scale).dp
+        ).padding(12.dp)
+    ) {
+        Text(
+            text = "$${amount}",
+            color = textColor
+        )
+    }
+    LaunchedEffect(notificationId) {
+        dy.animateTo(-TILE_SIZE)
+        delay(1_000)
+        gameLoop.addEvent(RemoveNotificationEvent(notificationId))
+    }
+}
+
+@Composable
 fun CarUI(
     cityMap: CityMap,
     car: Car
@@ -391,8 +453,10 @@ fun TileUI(
         }
     ) {
         when (content) {
-            TileContent.Grass -> Box(
-                modifier = Modifier.background(Color.Green).fillMaxSize()
+            TileContent.Grass -> Image(
+                bitmap = ImageCache.loadResource("grass.png"),
+                contentDescription = "grass",
+                modifier = Modifier.fillMaxSize(1f)
             )
             TileContent.Business -> Image(
                 bitmap = ImageCache.loadResource("business.png"),

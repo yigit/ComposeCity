@@ -107,14 +107,31 @@ class GameLoop(
     private val aiDispatcher = Executors.newSingleThreadExecutor().asCoroutineDispatcher()
     private val aiScope = CoroutineScope(aiDispatcher + Job())
     private val gameScope = CoroutineScope(Dispatchers.Main + Job())
+    private val _notifications = MutableStateFlow<List<Notification>>(emptyList())
+
+    val notifications: StateFlow<List<Notification>>
+        get() = _notifications
+
     init {
         start()
+    }
+
+    internal fun addNotification(notification: Notification) {
+        _notifications.value += notification
+    }
+
+    internal fun removeNotification(notificationId: String) {
+        _notifications.value = _notifications.value.filterNot {
+            it.id == notificationId
+        }
     }
 
     fun close() {
         gameScope.cancel()
         aiScope.cancel()
     }
+
+
 
     private fun start() {
         events.consumeAsFlow().onEach {
@@ -148,7 +165,9 @@ class GameLoop(
                 val arrivedPassengers = passengers.filter {
                     it.target.center.dist(it.pos.value) < CityMap.TILE_SIZE / 2
                 }
-                arrivedPassengers.forEach(player::onDeliveredPassenger)
+                arrivedPassengers.forEach {
+                    player.onDeliveredPassenger(this@GameLoop, it)
+                }
                 arrivedPassengers.forEach(city::removePassenger)
                 player.onDistanceTraveledByCars(distanceTraveledByCars)
             }

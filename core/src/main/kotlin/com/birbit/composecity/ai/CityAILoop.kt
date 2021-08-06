@@ -123,7 +123,7 @@ private class RemoveUpsetPassenger(
         val passenger = city.passengers.value.firstOrNull {
             it.id == passengerId && it.car.value == null
         } ?: return
-        gameLoop.player.onMissedPassenger(passenger)
+        gameLoop.player.onMissedPassenger(gameLoop, passenger)
         city.removeUnpickedPassenger(passenger)
     }
 }

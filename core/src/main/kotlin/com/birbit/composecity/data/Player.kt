@@ -23,14 +23,17 @@ class Player(
     val missedPassengers: StateFlow<Int>
         get() = _missedPassengers
 
-    fun onDeliveredPassenger(passenger: Passenger) {
+    fun onDeliveredPassenger(gameLoop: GameLoop, passenger: Passenger) {
         _deliveredPassengers.value += 1
-        _money.value += computeDeliveryFee(passenger)
+        val fee = computeDeliveryFee(passenger)
+        _money.value += fee
+        gameLoop.addNotification(Notification.MoneyMade(fee, passenger.pos.value))
     }
 
-    fun onMissedPassenger(passenger: Passenger) {
+    fun onMissedPassenger(gameLoop: GameLoop, passenger: Passenger) {
         _missedPassengers.value += 1
-        deductFailedPassengerPenalty()
+        deductFailedPassengerPenalty(gameLoop, passenger)
+
     }
 
     fun onDistanceTraveledByCars(distance: Float) {
@@ -52,8 +55,9 @@ class Player(
         return TRIP_BASE_COST + tip + distance.roundToInt().coerceAtLeast(1)
     }
 
-    fun deductFailedPassengerPenalty() {
+    fun deductFailedPassengerPenalty(gameLoop: GameLoop, passenger: Passenger) {
         _money.value -= FAILED_PASSENGER_PENALTY
+        gameLoop.addNotification(Notification.MoneyLost(amount = -FAILED_PASSENGER_PENALTY, pos = passenger.pos.value))
     }
 
     fun deductMoney(
