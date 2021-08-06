@@ -21,6 +21,7 @@ private val VALID_TILES_FOR_NEW_PASSENGERS = listOf(
     TileContent.Road,
     TileContent.Grass
 )
+private val MAX_PASSENGERS_PER_TILE = 3
 private fun <R> randomTile(
     gameLoop: GameLoop,
     city: City,
@@ -90,8 +91,9 @@ private class SetPassengerMoodIfNotOnCar(
 }
 
 private class AddPassengerEvent(
-    val row:Int,
-    val col:Int
+    val row: Int,
+    val col: Int,
+    val passengersOnThisTile: List<Id>
 ): AIEventWithResult<Duration?>() {
     override fun doApply(gameLoop: GameLoop, city: City): Duration? {
         val businessTiles = city.businessTiles
@@ -104,14 +106,31 @@ private class AddPassengerEvent(
         if (tile.content.value !in VALID_TILES_FOR_NEW_PASSENGERS) {
             return null
         }
-        city.addPassenger(
-            Passenger(
-                id = city.idGenerator.nextId(),
-                pos = tile.center,
-                target = targetBusiness,
-                creationTime = gameLoop.gameTime.now.value
-            )
+        val newPassenger = Passenger(
+            id = city.idGenerator.nextId(),
+            pos = tile.center,
+            target = targetBusiness,
+            creationTime = gameLoop.gameTime.now.value
         )
+        city.addPassenger(
+            newPassenger
+        )
+        val allPassengers = passengersOnThisTile.mapNotNull {  id ->
+            city.passengers.value.firstOrNull {
+                it.id == id && it.car.value == null
+            }
+        } + newPassenger
+        // reposition them to avoid overlaps
+        val increment = CityMap.TILE_SIZE / (allPassengers.size + 1)
+        val left = tile.center.x - CityMap.TILE_SIZE / 2
+        allPassengers.forEachIndexed { index, passenger ->
+            passenger.setPos(
+                Pos(
+                    x = left + increment * (index + 1),
+                    y = tile.center.y
+                )
+            )
+        }
         return gameLoop.gameTime.now.value
     }
 }
@@ -176,26 +195,27 @@ class CityAILoop(
     }
 
     private fun handlePassengerCreation(citySnapshot: CitySnapshot): Event? {
-        val passengerTiles = citySnapshot.availablePassengers.mapTo(mutableSetOf()) {
-            citySnapshot.grid.findClosest(it.pos)
-        }
-
         val events = citySnapshot.houseTiles.mapNotNull {
             val constraint = passengerCreationConstraintForHome(it)
             constraint.considerExecution(citySnapshot.now) {
                 val (goodChoice, badChoice) = citySnapshot.grid.neighborsOf(it.center).partition {
-                    it.content == TileContent.Road && !passengerTiles.contains(it)
+                    it.content == TileContent.Road
                 }
                 val candidateTiles = if (goodChoice.isNotEmpty()) {
                     goodChoice
                 } else {
                     badChoice
+                }.filter {
+                    (citySnapshot.availablePassengersByTile[it] ?: emptyList()).size < MAX_PASSENGERS_PER_TILE
                 }
                 if (candidateTiles.isEmpty()) {
                     null
                 } else {
                     val tile = candidateTiles[aiRand.nextInt(candidateTiles.size)]
-                    AddPassengerEvent(row = tile.row, col = tile.col)
+                    val passengersOnThisTile = citySnapshot.availablePassengersByTile[tile] ?: emptyList()
+                    AddPassengerEvent(row = tile.row, col = tile.col,
+                        passengersOnThisTile = passengersOnThisTile.map { it.id })
+
                 }
             }
         }
@@ -204,6 +224,7 @@ class CityAILoop(
         }
         return CompositeEvent(events)
     }
+
     private fun handleBusinessCreation(citySnapshot: CitySnapshot): Event? {
         return addBusinessConstraint.considerExecution(
             now = citySnapshot.now

@@ -46,7 +46,7 @@ class Player(
     }
 
     private fun computeDeliveryFee(passenger: Passenger): Int {
-        val distance = passenger.initialPos.dist(passenger.pos.value) / 10
+        val distance = passenger.initialPos.dist(passenger.pos.value) / 20
         val tip = when(passenger.mood.value) {
             Passenger.Mood.NEW -> 10
             Passenger.Mood.OK -> 3

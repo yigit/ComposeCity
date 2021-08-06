@@ -44,6 +44,10 @@ class Passenger constructor(
         _mood.value = mood
     }
 
+    fun setPos(pos: Pos) {
+        _pos.value = pos
+    }
+
     enum class Mood {
         NEW,
         OK,

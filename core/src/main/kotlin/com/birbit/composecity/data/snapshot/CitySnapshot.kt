@@ -19,6 +19,7 @@ class CitySnapshot(
 
     val hasAvailablePassengers
         get() = availablePassengers.isNotEmpty()
+
     init {
         // this is super inefficient but we don't care, for now...
         // we can make this mutable, track changes in the city and update efficiently, easily.
@@ -78,6 +79,12 @@ class CitySnapshot(
             } else {
                 null
             }
+        }
+    }
+
+    val availablePassengersByTile by lazy(LazyThreadSafetyMode.NONE) {
+        availablePassengers.groupBy {
+            grid.findClosest(it.pos)
         }
     }
 
