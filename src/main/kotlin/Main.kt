@@ -34,7 +34,7 @@ private class GameController {
         override fun onNewGame() {
             val gameLoop = GameLoop(
                 player = Player(
-                    initialMoney = 1000,
+                    initialMoney = 0,
                     deliveredPassengers = 0,
                     missedPassengers = 0
                 ),

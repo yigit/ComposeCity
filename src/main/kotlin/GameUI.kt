@@ -1,25 +1,26 @@
 // Copyright 2000-2021 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license that can be found in the LICENSE file.
-import androidx.compose.animation.*
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.desktop.DesktopMaterialTheme
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.focus.*
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.input.key.*
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.unit.*
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import com.birbit.composecity.GameTime
 import com.birbit.composecity.SetGameSpeedEvent
 import com.birbit.composecity.ToggleStartStopGameEvent
@@ -27,6 +28,7 @@ import com.birbit.composecity.data.*
 import com.birbit.composecity.data.CityMap.Companion.TILE_SIZE
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import java.util.*
 import kotlin.time.ExperimentalTime
@@ -96,24 +98,43 @@ fun GameUI(gameLoop: GameLoop, onExit: () -> Unit) {
         }
     }
     val player = gameLoop.player
+    val hasMoney by player.money.map {
+        it > 0
+    }.distinctUntilChanged().collectAsState(true)
     DesktopMaterialTheme {
         val focusRequester = remember { FocusRequester() }
-        Column(modifier = Modifier.fillMaxSize(1f)
-            .focusRequester(focusRequester)
-            .focusable(true)
-            .onKeyEvent(uiCallbacks::onKeyEvent)
-        ) {
-            LaunchedEffect(Unit) {
-                focusRequester.requestFocus()
+        if (hasMoney) {
+            Column(modifier = Modifier.fillMaxSize(1f)
+                .focusRequester(focusRequester)
+                .focusable(true)
+                .onKeyEvent(uiCallbacks::onKeyEvent)
+            ) {
+                LaunchedEffect(Unit) {
+                    focusRequester.requestFocus()
+                }
+                CityMapUI(gameLoop, city, uiCallbacks, modifier = Modifier.weight(1f))
+                ControlsUI(
+                    controls = uiControls,
+                    callbacks = uiCallbacks,
+                    player = player,
+                    gameTime = gameLoop.gameTime
+                )
             }
-            CityMapUI(gameLoop, city, uiCallbacks, modifier = Modifier.weight(1f))
-            ControlsUI(
-                controls = uiControls,
-                callbacks = uiCallbacks,
-                player = player,
-                gameTime = gameLoop.gameTime
-            )
+        } else {
+            LaunchedEffect(Unit) {
+                uiCallbacks.onSetGameSpeed(GameTime.GameSpeed.PAUSED)
+            }
+            OutOfMoneyUI { amount ->
+                if (amount < 1) {
+                    uiCallbacks.onExit()
+                } else {
+                    gameLoop.addEvent(
+                        AddFreeMoneyEvent(amount)
+                    )
+                }
+            }
         }
+
     }
 }
 

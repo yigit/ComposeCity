@@ -70,6 +70,10 @@ class Player(
         return true
     }
 
+    fun addFreeMoney(amount: Int) {
+        _money.value += amount
+    }
+
     companion object {
         // TODO we should have rent for each taxi station. that requires some game time :) but that would help fine tune
         //  economy

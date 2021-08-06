@@ -82,6 +82,15 @@ class AddTaxiStationEvent(
     }
 }
 
+class AddFreeMoneyEvent(
+    private val amount: Int
+): Event {
+    override fun apply(gameLoop: GameLoop, city: City) {
+        gameLoop.player.addFreeMoney(amount)
+    }
+
+}
+
 val SAVE_FILE_NAME = "saved.city"
 class SaveEvent : Event {
     override fun apply(gameLoop: GameLoop, city: City) {
