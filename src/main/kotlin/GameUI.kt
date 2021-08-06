@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.birbit.composecity.GameTime
 import com.birbit.composecity.SetGameSpeedEvent
+import com.birbit.composecity.ToggleStartStopGameEvent
 import com.birbit.composecity.data.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
@@ -46,6 +47,23 @@ fun GameUI(gameLoop: GameLoop, onExit: () -> Unit) {
     val uiCallbacks = object : ControlCallbacks {
         override fun onExit() {
             onExit()
+        }
+
+        override fun onKeyEvent(event: KeyEvent): Boolean {
+            if (event.type != KeyEventType.KeyDown) {
+                return false
+            }
+            return when {
+                event.key == Key.Spacebar -> {
+                    gameLoop.addEvent(ToggleStartStopGameEvent())
+                    true
+                }
+                event.key == Key.Escape -> {
+                    onExit()
+                    true
+                }
+                else -> false
+            }
         }
 
         override fun onTaxiMenuClick() {
@@ -77,22 +95,13 @@ fun GameUI(gameLoop: GameLoop, onExit: () -> Unit) {
         }
     }
     val player = gameLoop.player
-    val gameSpeed by gameLoop.gameTime.gameSpeed.collectAsState()
     DesktopMaterialTheme {
         val focusRequester = remember { FocusRequester() }
         Column(modifier = Modifier.fillMaxSize(1f)
             .focusRequester(focusRequester)
             .focusable(true)
-            .onKeyEvent {
-                if (it.key == Key.Spacebar && it.type == KeyEventType.KeyDown) {
-                    if (gameSpeed == GameTime.GameSpeed.PAUSED) {
-                        uiCallbacks.onSetGameSpeed(GameTime.GameSpeed.NORMAL)
-                    } else {
-                        uiCallbacks.onSetGameSpeed(GameTime.GameSpeed.PAUSED)
-                    }
-                }
-                false
-        }) {
+            .onKeyEvent(uiCallbacks::onKeyEvent)
+        ) {
             LaunchedEffect(Unit) {
                 focusRequester.requestFocus()
             }
@@ -116,6 +125,7 @@ interface ControlCallbacks {
     fun onSave()
     fun onSetGameSpeed(speed: GameTime.GameSpeed)
     fun onExit()
+    fun onKeyEvent(event: KeyEvent): Boolean
 }
 
 @OptIn(ExperimentalTime::class, androidx.compose.animation.ExperimentalAnimationApi::class)

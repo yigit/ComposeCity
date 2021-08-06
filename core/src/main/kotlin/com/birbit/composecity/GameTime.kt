@@ -9,6 +9,15 @@ import kotlinx.coroutines.flow.map
 import kotlin.time.Duration
 import kotlin.time.ExperimentalTime
 
+class ToggleStartStopGameEvent : Event {
+    override fun apply(gameLoop: GameLoop, city: City) {
+        if (gameLoop.gameTime.gameSpeed.value == GameTime.GameSpeed.PAUSED) {
+            gameLoop.gameTime.setGameSpeed(GameTime.GameSpeed.NORMAL)
+        } else {
+            gameLoop.gameTime.setGameSpeed(GameTime.GameSpeed.PAUSED)
+        }
+    }
+}
 class SetGameSpeedEvent(
     val gameSpeed: GameTime.GameSpeed
 ): Event {
