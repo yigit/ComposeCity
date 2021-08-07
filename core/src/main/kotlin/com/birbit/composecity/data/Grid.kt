@@ -66,8 +66,15 @@ interface Grid<T> {
     private fun findClosestCoordinates(
         pos: Pos
     ) : Coordinates = Coordinates(
-        row = pos.row.coerceIn(0f, height * unitSize).div(unitSize).toInt(),
-        col = pos.col.coerceIn(0f, width * unitSize).div(unitSize).toInt()
+        row = pos.row.coerceIn(0f, height * unitSize - 1f).div(unitSize).toInt(),
+        col = pos.col.coerceIn(0f, width * unitSize - 1f).div(unitSize).toInt()
+    )
+
+    private fun findClosestCoordinatesWithoutBoundsCheck(
+        pos: Pos
+    ) : Coordinates = Coordinates(
+        row = pos.row.div(unitSize).toInt(),
+        col = pos.col.div(unitSize).toInt()
     )
 
     suspend fun findPathParallel(
@@ -157,6 +164,16 @@ interface Grid<T> {
     ): T {
         val coordinates = findClosestCoordinates(pos)
         return get(
+            row = coordinates.row,
+            col = coordinates.col
+        )
+    }
+
+    fun findClosestIfInBounds(
+        pos: Pos
+    ): T? {
+        val coordinates = findClosestCoordinatesWithoutBoundsCheck(pos)
+        return maybeGet(
             row = coordinates.row,
             col = coordinates.col
         )

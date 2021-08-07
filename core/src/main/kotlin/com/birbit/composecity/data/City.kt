@@ -4,7 +4,6 @@ import com.birbit.composecity.Id
 import com.birbit.composecity.IdGenerator
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import java.util.concurrent.CopyOnWriteArrayList
 
 /**
  * TODO: what would help us clean things is that we would have two interfaces of each class one of which provides
@@ -90,6 +89,27 @@ class City(
             }
         } else if (mutableTile.content.value == TileContent.Road) {
             mutableTile.content.value = TileContent.Grass
+        }
+    }
+
+    fun setTilesToRoad(gameLoop: GameLoop, player: Player, tiles: List<Tile>) {
+        val valid = tiles.filter {
+            it.content.value == TileContent.Grass
+        }.map {
+            _map.mutableTiles.get(row = it.row, col = it.col)
+        }
+        if (valid.isEmpty()) return
+        val cost = valid.size * Player.COST_OF_ROAD
+        player.deductMoney(amount = cost) {
+            valid.forEach {
+                it.content.value = TileContent.Road
+            }
+            gameLoop.addNotification(
+                Notification.MoneyLost(
+                    amount = cost,
+                    pos = valid.last().center
+                )
+            )
         }
     }
 

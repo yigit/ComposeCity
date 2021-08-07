@@ -3,21 +3,26 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.desktop.DesktopMaterialTheme
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
 import androidx.compose.foundation.focusable
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.input.key.*
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -26,10 +31,12 @@ import com.birbit.composecity.SetGameSpeedEvent
 import com.birbit.composecity.ToggleStartStopGameEvent
 import com.birbit.composecity.data.*
 import com.birbit.composecity.data.CityMap.Companion.TILE_SIZE
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 import java.util.*
 import kotlin.time.ExperimentalTime
 
@@ -77,6 +84,10 @@ fun GameUI(gameLoop: GameLoop, onExit: () -> Unit) {
             uiControls.toggleMode(Mode.ADD_CAR)
         }
 
+        override fun onSetMultipleTilesToRoad(tiles: List<Tile>) {
+            gameLoop.addEvent(SetTilesToRoad(tiles))
+        }
+
         override fun onTileClick(tile: Tile) {
             if (uiControls.modeValue == Mode.CHANGE_TILE) {
                 gameLoop.addEvent(ToggleTileEvent(tile))
@@ -99,7 +110,7 @@ fun GameUI(gameLoop: GameLoop, onExit: () -> Unit) {
     }
     val player = gameLoop.player
     val hasMoney by player.money.map {
-        it > 0
+        it >= 0
     }.distinctUntilChanged().collectAsState(true)
     DesktopMaterialTheme {
         val focusRequester = remember { FocusRequester() }
@@ -108,6 +119,16 @@ fun GameUI(gameLoop: GameLoop, onExit: () -> Unit) {
                 .focusRequester(focusRequester)
                 .focusable(true)
                 .onKeyEvent(uiCallbacks::onKeyEvent)
+//                .pointerInput(Unit) {
+//                    println("enter pointer input scope")
+//                    this.detectDragGesturesAfterLongPress { change, dragAmount ->
+//                        if (change.type == PointerType.Mouse || change.type == PointerType.Touch) {
+//                            gameLoop.addNotification(
+//                                Notification.MoneyMade(1, Pos(x = change.position.x, y = change.position.y))
+//                            )
+//                        }
+//                    }
+//                }
             ) {
                 LaunchedEffect(Unit) {
                     focusRequester.requestFocus()
@@ -134,7 +155,6 @@ fun GameUI(gameLoop: GameLoop, onExit: () -> Unit) {
                 }
             }
         }
-
     }
 }
 
@@ -147,6 +167,7 @@ interface ControlCallbacks {
     fun onSetGameSpeed(speed: GameTime.GameSpeed)
     fun onExit()
     fun onKeyEvent(event: KeyEvent): Boolean
+    fun onSetMultipleTilesToRoad(tiles: List<Tile>)
 }
 
 @OptIn(ExperimentalTime::class, androidx.compose.animation.ExperimentalAnimationApi::class)
@@ -311,6 +332,9 @@ fun CityMapUI(
             val scale = minOf(heightPerTile, widthPerTile) / CityMap.TILE_SIZE / density
             DisplayConfig(scale)
         }
+        var mouseDragTiles by remember {
+            mutableStateOf(emptyList<Tile>())
+        }
 
         CompositionLocalProvider(
             displayConfig provides currentConfig
@@ -323,6 +347,8 @@ fun CityMapUI(
                         modifier = Modifier.absoluteOffset(
                             x = displayConfig.current.tileSizeDp.times(col),
                             y = displayConfig.current.tileSizeDp.times(row)
+                        ).alpha(
+                            if (mouseDragTiles.isEmpty()) 1f else 0.5f
                         ),
                         controlCallbacks::onTileClick
                     )
@@ -335,9 +361,56 @@ fun CityMapUI(
                 PassangerUI(it)
             }
             NotificationsUI(gameLoop)
+            val scale = displayConfig.current.scale
+
+            Box(modifier = Modifier.fillMaxSize().pointerInput(Unit) {
+                coroutineScope {
+                    launch {
+                        detectTapGestures {
+                            val pos = it.toPos(scale)
+                            cityMap.tiles.findClosestIfInBounds(pos)?.let { tile ->
+                                controlCallbacks.onTileClick(tile)
+                                mouseDragTiles = emptyList()
+                            }
+
+                        }
+                    }
+                    launch {
+                        detectDragGestures(
+                            onDragEnd = {
+                                if (mouseDragTiles.isNotEmpty()) {
+                                    controlCallbacks.onSetMultipleTilesToRoad(mouseDragTiles)
+                                }
+                                mouseDragTiles = emptyList()
+                            }
+                        ) { change, dragAmount ->
+                            val pos = change.position.toPos(scale)
+                            cityMap.tiles.findClosestIfInBounds(pos)?.let {  tile ->
+                                if (tile.content.value == TileContent.Road ||
+                                    tile.content.value == TileContent.Grass) {
+                                    if (!mouseDragTiles.contains(tile)) {
+                                        mouseDragTiles = mouseDragTiles + tile
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }) {
+                mouseDragTiles.forEach { tile ->
+                    Box(
+                        modifier = Modifier.size(displayConfig.current.tileSizeDp).absoluteOffset(
+                            x = displayConfig.current.tileSizeDp.times(tile.col),
+                            y = displayConfig.current.tileSizeDp.times(tile.row)
+                        ).alpha(0.3f).background(color = Color.Black)
+                    )
+                }
+
+            }
         }
     }
 }
+
 
 private fun Passenger.Mood.color() = when(this) {
     Passenger.Mood.NEW -> Color.Black
@@ -469,9 +542,7 @@ fun TileUI(
 ) {
     val content by tile.content.collectAsState()
     Box(
-        modifier = modifier.size(displayConfig.current.tileSizeDp).clickable {
-            onClickHandler(tile)
-        }
+        modifier = modifier.size(displayConfig.current.tileSizeDp)
     ) {
         when (content) {
             TileContent.Grass -> Image(
@@ -505,6 +576,17 @@ fun TileUI(
     }
 }
 
+
+@Composable
+fun SelectionOverlayUI(
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier.size(displayConfig.current.tileSizeDp).background(color = Color.Black)
+    )
+}
+
+
 private val baseState = MutableStateFlow(TileContent.Grass)
 private fun TileContent.roadMask(shift: Int) = if (isRoad()) {
     1.shl(shift)
@@ -519,9 +601,6 @@ private fun getTileBitmap(
     cityMap: Grid<Tile>,
     tile: Tile
 ): ImageBitmap {
-//    check(tile.contentValue == TileContent.Road) {
-//        "why are we getting bitmap for ${tile.contentValue}"
-//    }
     val north by (cityMap.maybeGet(
         tile.row - 1,
         tile.col
@@ -569,3 +648,5 @@ private val roadAssetMapping = mutableMapOf<Int, String>(
     0b0010 to "horizontal.png",
     0b1000 to "horizontal.png",
 )
+
+private fun Offset.toPos(scale: Float) = Pos(x = x / scale, y = y / scale)

@@ -61,6 +61,15 @@ class ToggleTileEvent(
     }
 }
 
+class SetTilesToRoad(
+    private val tiles: List<Tile>
+): Event {
+    override fun apply(gameLoop: GameLoop, city: City) {
+        city.setTilesToRoad(gameLoop, gameLoop.player, tiles)
+    }
+
+}
+
 class AddCarEvent(
     private val tile: Tile
 ) : Event {
