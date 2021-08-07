@@ -114,28 +114,29 @@ fun GameUI(gameLoop: GameLoop, onExit: () -> Unit) {
     }.distinctUntilChanged().collectAsState(true)
     DesktopMaterialTheme {
         val focusRequester = remember { FocusRequester() }
-        if (hasMoney) {
-            Column(modifier = Modifier.fillMaxSize(1f)
-                .focusRequester(focusRequester)
-                .focusable(true)
-                .onKeyEvent(uiCallbacks::onKeyEvent)
-            ) {
-                LaunchedEffect(Unit) {
-                    focusRequester.requestFocus()
-                }
-                CityMapUI(gameLoop, city, uiCallbacks, modifier = Modifier.weight(1f))
-                ControlsUI(
-                    controls = uiControls,
-                    callbacks = uiCallbacks,
-                    player = player,
-                    gameTime = gameLoop.gameTime
-                )
+        Column(modifier = Modifier.fillMaxSize(1f)
+            .focusRequester(focusRequester)
+            .focusable(true)
+            .onKeyEvent(uiCallbacks::onKeyEvent)
+        ) {
+            LaunchedEffect(Unit) {
+                focusRequester.requestFocus()
             }
-        } else {
+            CityMapUI(gameLoop, city, uiCallbacks, modifier = Modifier.weight(1f))
+            ControlsUI(
+                controls = uiControls,
+                callbacks = uiCallbacks,
+                player = player,
+                gameTime = gameLoop.gameTime
+            )
+        }
+        if (!hasMoney) {
             LaunchedEffect(Unit) {
                 uiCallbacks.onSetGameSpeed(GameTime.GameSpeed.PAUSED)
             }
-            OutOfMoneyUI { amount ->
+            OutOfMoneyUI(
+                modifier = Modifier.fillMaxSize(1f)
+            ) { amount ->
                 if (amount < 1) {
                     uiCallbacks.onExit()
                 } else {

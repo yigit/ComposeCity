@@ -16,64 +16,69 @@ private enum class MenuUI{
 }
 @Composable
 fun OutOfMoneyUI(
+    modifier: Modifier,
     exit: (addedMoney: Int) -> Unit
 ) {
     var ui by remember {
         mutableStateOf(MenuUI.FIRST)
     }
-    Column(
-        modifier = Modifier.fillMaxWidth(
-            .6f
-        ).background(
-            color = MaterialTheme.colors.surface
-        ).zIndex(1f).shadow(4.dp).padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.SpaceBetween,
+    Box(
+        modifier = modifier
     ) {
-        when(ui) {
-            MenuUI.FIRST -> {
-                Text(
-                    text = "Oh no, you've run out of money",
-                    style = MaterialTheme.typography.h3
-                )
-                Button(
-                    onClick = {
-                        ui = MenuUI.ADD_MONEY
-                    }
-                ) {
+        Column(
+            modifier = modifier.fillMaxWidth(
+                .6f
+            ).wrapContentSize().background(
+                color = MaterialTheme.colors.surface
+            ).zIndex(1f).shadow(4.dp).padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.SpaceBetween,
+        ) {
+            when(ui) {
+                MenuUI.FIRST -> {
                     Text(
-                        text = "Buy money :)"
+                        text = "Oh no, you've run out of money",
+                        style = MaterialTheme.typography.h3
                     )
-                }
-                Spacer(modifier = Modifier.size(16.dp))
-                Button(
-                    onClick = {
-                        exit(0)
-                    }
-                ) {
-                    Text(
-                        text = "N'ah I'm cheap"
-                    )
-                }
-            }
-            MenuUI.ADD_MONEY -> {
-                Text(
-                    text = "Just kidding... how much do you want?",
-                    style = MaterialTheme.typography.h3
-                )
-                listOf(500, 1000, 2000).forEach { amount ->
                     Button(
                         onClick = {
-                            exit(amount)
+                            ui = MenuUI.ADD_MONEY
                         }
                     ) {
                         Text(
-                            text = "$$amount"
+                            text = "Buy money :)"
                         )
                     }
                     Spacer(modifier = Modifier.size(16.dp))
+                    Button(
+                        onClick = {
+                            exit(0)
+                        }
+                    ) {
+                        Text(
+                            text = "N'ah I'm cheap"
+                        )
+                    }
                 }
+                MenuUI.ADD_MONEY -> {
+                    Text(
+                        text = "Just kidding... how much do you want?",
+                        style = MaterialTheme.typography.h3
+                    )
+                    listOf(500, 1000, 2000).forEach { amount ->
+                        Button(
+                            onClick = {
+                                exit(amount)
+                            }
+                        ) {
+                            Text(
+                                text = "$$amount"
+                            )
+                        }
+                        Spacer(modifier = Modifier.size(16.dp))
+                    }
 
+                }
             }
         }
     }
