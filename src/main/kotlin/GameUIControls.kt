@@ -7,9 +7,7 @@ class GameUIControls {
         get() = _mode
     val modeValue: Mode
         get() = _mode.value
-    fun setMode(mode: Mode) {
-        _mode.value = mode
-    }
+
     fun toggleMode(mode: Mode) {
         if (_mode.value == mode) {
             _mode.value = Mode.CHANGE_TILE
@@ -22,6 +20,5 @@ class GameUIControls {
 enum class Mode {
     CHANGE_TILE,
     ADD_CAR,
-    ADD_BUSINESS,
     ADD_TAXI_STATION
 }

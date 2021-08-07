@@ -224,6 +224,5 @@ class LoadSave(
             }
             return city
         }
-        const val VERSION = 3
     }
 }

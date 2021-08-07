@@ -24,7 +24,7 @@ class Passenger constructor(
     val car: StateFlow<Car?>
         get() = _car
 
-    private val _mood = MutableStateFlow<Mood>(Mood.NEW)
+    private val _mood = MutableStateFlow(Mood.NEW)
 
     val mood: StateFlow<Mood>
         get() = _mood

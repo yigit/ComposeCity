@@ -15,10 +15,6 @@ class Path(
         return target
     }
 
-    fun isFinished(): Boolean {
-        return index >= positions.size
-    }
-
     companion object {
         const val CLOSE_ENOUGH = 1f
     }

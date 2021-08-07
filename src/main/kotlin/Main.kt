@@ -6,10 +6,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.type
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
@@ -73,10 +69,10 @@ fun main() = application{
         state = windowState,
     ) {
         val gameLoop by gameController.currentGame.collectAsState()
-        val game = gameLoop
+        val currentGameLoop = gameLoop
         DesktopMaterialTheme {
             when {
-                game == null -> {
+                currentGameLoop == null -> {
                     Box(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
@@ -87,7 +83,7 @@ fun main() = application{
                     }
                 }
                 else -> {
-                    GameUI(game) {
+                    GameUI(currentGameLoop) {
                         gameController.exitCurrentGame()
                     }
                 }

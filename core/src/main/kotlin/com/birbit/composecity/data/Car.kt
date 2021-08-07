@@ -2,10 +2,12 @@ package com.birbit.composecity.data
 
 import com.birbit.composecity.Id
 import com.birbit.composecity.data.snapshot.CitySnapshot
-import com.curiouscreature.kotlin.math.*
+import com.curiouscreature.kotlin.math.Float2
+import com.curiouscreature.kotlin.math.degrees
+import com.curiouscreature.kotlin.math.length
+import com.curiouscreature.kotlin.math.normalize
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.firstOrNull
 import kotlin.math.atan2
 import kotlin.time.Duration
 import kotlin.time.ExperimentalTime
@@ -77,8 +79,8 @@ class Car(
 
     }
 
-    private val _pos = MutableStateFlow<Pos>(initialPos)
-    private val _orientation = MutableStateFlow<Float>(0f)
+    private val _pos = MutableStateFlow(initialPos)
+    private val _orientation = MutableStateFlow(0f)
 
     val pos: StateFlow<Pos>
         get() = _pos

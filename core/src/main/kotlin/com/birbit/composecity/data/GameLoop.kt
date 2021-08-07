@@ -70,19 +70,6 @@ class SetTilesToRoad(
 
 }
 
-class AddCarEvent(
-    private val tile: Tile
-) : Event {
-    override fun apply(gameLoop: GameLoop, city: City) {
-        val newCar = Car(
-            id = city.idGenerator.nextId(),
-            initialPos = tile.center,
-            taxiStation = tile
-        )
-        city.addCar(newCar)
-    }
-}
-
 class AddTaxiStationEvent(
     private val tile: Tile
 ): Event {
@@ -116,7 +103,6 @@ class GameLoop(
     val city: City
 ) {
     val gameTime = GameTime(startDuration)
-    internal val rand = Random(System.nanoTime())
 
     private val events = Channel<Event>(
         capacity = Channel.UNLIMITED

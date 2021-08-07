@@ -57,10 +57,6 @@ class GameTime(
         return tickDuration
     }
 
-    internal fun setNow(duration: Duration) {
-        _now.value = duration
-    }
-
     companion object {
         private val START_TIME = Duration.ZERO
     }

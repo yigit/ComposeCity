@@ -90,6 +90,7 @@ class CarAILoop {
         set(value) = RESERVED_PASSENGERS.put(this.blackboard, value)
 
     companion object {
+        @Suppress("ClassName")
         object RESERVED_PASSENGERS : Blackboard.Key<List<CitySnapshot.TileSnapshot>>
     }
 }

@@ -1,7 +1,5 @@
 package com.birbit.composecity.data
 
-import kotlinx.coroutines.Deferred
-
 
 private data class Coordinates(
     val row:Int,
@@ -179,7 +177,7 @@ interface Grid<T> {
         )
     }
 
-    private fun neighborsOf(coordinates: Coordinates) = sequence<Coordinates> {
+    private fun neighborsOf(coordinates: Coordinates) = sequence {
         coordinates.north(width, height)?.let {
             yield(it)
         }

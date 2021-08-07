@@ -17,9 +17,6 @@ class CitySnapshot(
     val businessTiles: List<TileSnapshot>
     val houseTiles: List<TileSnapshot>
 
-    val hasAvailablePassengers
-        get() = availablePassengers.isNotEmpty()
-
     init {
         // this is super inefficient but we don't care, for now...
         // we can make this mutable, track changes in the city and update efficiently, easily.
@@ -69,10 +66,9 @@ class CitySnapshot(
             if (car == null) {
                 PassengerSnapshot(
                     id = it.id,
-                    creationTime = it.creationTime,
-                    mood = it.mood.value,
                     pos = it.pos.value,
-                    target = grid.findClosest(it.pos.value)
+                    mood = it.mood.value,
+                    creationTime = it.creationTime
                 ).also {
                     grid.findClosest(it.pos)._passengers.add(it)
                 }
@@ -102,10 +98,6 @@ class CitySnapshot(
             get() = tile.col
         val center
             get() = tile.center
-        val passangers: List<PassengerSnapshot>
-            get() = _passengers
-        val cars: List<CarSnapshot>
-            get() = _cars
     }
 
     class CarSnapshot(
@@ -113,32 +105,16 @@ class CitySnapshot(
         val pos: Pos,
         val passengerTarget: TileSnapshot?,
         val taxiStation: TileSnapshot
-    ) {
-
-    }
+    )
 
     @OptIn(ExperimentalTime::class)
     class PassengerSnapshot(
         val id: Id,
         val pos: Pos,
-        val target: TileSnapshot,
         val mood: Passenger.Mood,
         val creationTime: Duration
     )
 
-
-    fun findPath(
-        start: TileSnapshot,
-        canVisit : (TileSnapshot)-> Boolean,
-        isTarget: (TileSnapshot) -> Boolean
-    ): List<TileSnapshot>? {
-        return grid.findPath(
-            start = start,
-            position = { it.center },
-            canVisit = canVisit,
-            isTarget = isTarget
-        )
-    }
 
     suspend fun findPathParallel(
         queue: FairSharedQueue<TileSnapshot, List<TileSnapshot>?>,

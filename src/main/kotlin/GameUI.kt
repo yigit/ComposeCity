@@ -577,16 +577,6 @@ fun TileUI(
 }
 
 
-@Composable
-fun SelectionOverlayUI(
-    modifier: Modifier = Modifier
-) {
-    Box(
-        modifier = modifier.size(displayConfig.current.tileSizeDp).background(color = Color.Black)
-    )
-}
-
-
 private val baseState = MutableStateFlow(TileContent.Grass)
 private fun TileContent.roadMask(shift: Int) = if (isRoad()) {
     1.shl(shift)
@@ -631,7 +621,7 @@ private fun getTileBitmap(
     )
 }
 
-private val roadAssetMapping = mutableMapOf<Int, String>(
+private val roadAssetMapping = mutableMapOf(
     0b1111 to "4way.png",
     0b1110 to "all-but-north.png",
     0b1101 to "all-but-west.png",

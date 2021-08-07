@@ -1,7 +1,5 @@
 package com.birbit.composecity.data
 
-import com.birbit.composecity.data.snapshot.CitySnapshot
-
 interface Blackboard {
     fun <T> put(key: Key<T>, t: T)
     fun <T> get(key: Key<T>): T?

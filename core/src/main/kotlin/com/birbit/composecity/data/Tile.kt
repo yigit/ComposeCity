@@ -18,7 +18,7 @@ data class TileImpl(
     override val row:Int,
     override val col:Int
 ) : MutableTile {
-    override val content = MutableStateFlow<TileContent>(
+    override val content = MutableStateFlow(
         TileContent.Grass
     )
 
