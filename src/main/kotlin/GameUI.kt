@@ -119,16 +119,6 @@ fun GameUI(gameLoop: GameLoop, onExit: () -> Unit) {
                 .focusRequester(focusRequester)
                 .focusable(true)
                 .onKeyEvent(uiCallbacks::onKeyEvent)
-//                .pointerInput(Unit) {
-//                    println("enter pointer input scope")
-//                    this.detectDragGesturesAfterLongPress { change, dragAmount ->
-//                        if (change.type == PointerType.Mouse || change.type == PointerType.Touch) {
-//                            gameLoop.addNotification(
-//                                Notification.MoneyMade(1, Pos(x = change.position.x, y = change.position.y))
-//                            )
-//                        }
-//                    }
-//                }
             ) {
                 LaunchedEffect(Unit) {
                     focusRequester.requestFocus()
@@ -159,7 +149,7 @@ fun GameUI(gameLoop: GameLoop, onExit: () -> Unit) {
 }
 
 
-interface ControlCallbacks {
+private interface ControlCallbacks {
     fun onTaxiMenuClick()
     fun onAddCar()
     fun onTileClick(tile: Tile)
@@ -172,7 +162,7 @@ interface ControlCallbacks {
 
 @OptIn(ExperimentalTime::class, androidx.compose.animation.ExperimentalAnimationApi::class)
 @Composable
-fun ControlsUI(
+private fun ControlsUI(
     controls: GameUIControls,
     gameTime: GameTime,
     callbacks: ControlCallbacks,
@@ -309,7 +299,7 @@ fun ControlsUI(
 private val displayConfig = compositionLocalOf<DisplayConfig> { error("cannot find display config!") }
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
-fun CityMapUI(
+private fun CityMapUI(
     gameLoop: GameLoop,
     city: City,
     controlCallbacks: ControlCallbacks,
@@ -420,7 +410,7 @@ private fun Passenger.Mood.color() = when(this) {
 }
 
 @Composable
-fun PassangerUI(
+private fun PassangerUI(
     passenger: Passenger
 ) {
     val mood by passenger.mood.collectAsState()
@@ -455,7 +445,7 @@ fun PassangerUI(
 }
 
 @Composable
-fun NotificationsUI(
+private fun NotificationsUI(
     gameLoop: GameLoop
 ) {
     val notifications by gameLoop.notifications.collectAsState()
@@ -482,7 +472,7 @@ fun NotificationsUI(
 }
 
 @Composable
-fun MoneyChangeNotificationUI(
+private fun MoneyChangeNotificationUI(
     gameLoop: GameLoop,
     notificationId: String,
     backgroundColor: Color,
@@ -515,7 +505,7 @@ fun MoneyChangeNotificationUI(
 }
 
 @Composable
-fun CarUI(
+private fun CarUI(
     cityMap: CityMap,
     car: Car
 ) {
@@ -534,7 +524,7 @@ fun CarUI(
 }
 
 @Composable
-fun TileUI(
+private fun TileUI(
     cityMap: CityMap,
     tile: Tile,
     modifier: Modifier = Modifier,
