@@ -1,6 +1,5 @@
 // Copyright 2000-2021 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license that can be found in the LICENSE file.
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.desktop.DesktopMaterialTheme
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -16,7 +15,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
@@ -45,9 +43,29 @@ import kotlin.time.ExperimentalTime
 @Stable
 private data class DisplayConfig(
     val scale: Float,
-    val tileSizeDp:Dp = (CityMap.TILE_SIZE * scale).dp,
-    val carSizeDp:Dp = (Car.CAR_SIZE * scale).dp,
+    val tileSizeDp: Dp = (TILE_SIZE * scale).dp,
+    val carSizeDp: Dp = (Car.CAR_SIZE * scale).dp,
     val passengerSizeDp: Dp = tileSizeDp / 4,
+)
+
+@Composable
+@Stable
+fun Modifier.coordinatesAbsoluteOffset(
+    row: Int,
+    col: Int,
+) = Modifier.absoluteOffset(
+    x = displayConfig.current.tileSizeDp.times(col),
+    y = displayConfig.current.tileSizeDp.times(row)
+)
+
+@Composable
+@Stable
+fun Modifier.positionAbsoluteOffset(
+    pos: Pos,
+    centerConstraint: Dp = Dp.Hairline
+) = Modifier.absoluteOffset(
+    x = (pos.col * displayConfig.current.scale).dp - centerConstraint.div(2),
+    y = (pos.row * displayConfig.current.scale).dp - centerConstraint.div(2)
 )
 
 @OptIn(ExperimentalComposeUiApi::class)
@@ -116,10 +134,11 @@ fun GameUI(gameLoop: GameLoop, onExit: () -> Unit) {
     }.distinctUntilChanged().collectAsState(true)
     DesktopMaterialTheme {
         val focusRequester = remember { FocusRequester() }
-        Column(modifier = Modifier.fillMaxSize(1f)
-            .focusRequester(focusRequester)
-            .focusable(true)
-            .onKeyEvent(uiCallbacks::onKeyEvent)
+        Column(
+            modifier = Modifier.fillMaxSize(1f)
+                .focusRequester(focusRequester)
+                .focusable(true)
+                .onKeyEvent(uiCallbacks::onKeyEvent)
         ) {
             LaunchedEffect(Unit) {
                 focusRequester.requestFocus()
@@ -300,6 +319,7 @@ private fun ControlsUI(
 }
 
 private val displayConfig = compositionLocalOf<DisplayConfig> { error("cannot find display config!") }
+
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
 private fun CityMapUI(
@@ -322,7 +342,7 @@ private fun CityMapUI(
         ) {
             val heightPerTile = this.constraints.maxHeight.toFloat() / cityMap.height
             val widthPerTile = this.constraints.maxWidth.toFloat() / cityMap.width
-            val scale = minOf(heightPerTile, widthPerTile) / CityMap.TILE_SIZE / density
+            val scale = minOf(heightPerTile, widthPerTile) / TILE_SIZE / density
             DisplayConfig(scale)
         }
         var mouseDragTiles by remember {
@@ -337,13 +357,12 @@ private fun CityMapUI(
                     TileUI(
                         cityMap = cityMap,
                         tile = cityMap.tiles.get(row = row, col = col),
-                        modifier = Modifier.absoluteOffset(
-                            x = displayConfig.current.tileSizeDp.times(col),
-                            y = displayConfig.current.tileSizeDp.times(row)
+                        modifier = Modifier.coordinatesAbsoluteOffset(
+                            row = row,
+                            col = col
                         ).alpha(
                             if (mouseDragTiles.isEmpty()) 1f else 0.5f
-                        ),
-                        controlCallbacks::onTileClick
+                        )
                     )
                 }
             }
@@ -382,9 +401,10 @@ private fun CityMapUI(
                             }
                         ) { change, dragAmount ->
                             val pos = change.position.toPos(scale)
-                            cityMap.tiles.findClosestIfInBounds(pos)?.let {  tile ->
+                            cityMap.tiles.findClosestIfInBounds(pos)?.let { tile ->
                                 if (tile.content.value == TileContent.Road ||
-                                    tile.content.value == TileContent.Grass) {
+                                    tile.content.value == TileContent.Grass
+                                ) {
                                     if (!mouseDragTiles.contains(tile)) {
                                         mouseDragTiles = mouseDragTiles + tile
                                     }
@@ -396,10 +416,12 @@ private fun CityMapUI(
             }) {
                 mouseDragTiles.forEach { tile ->
                     Box(
-                        modifier = Modifier.size(displayConfig.current.tileSizeDp).absoluteOffset(
-                            x = displayConfig.current.tileSizeDp.times(tile.col),
-                            y = displayConfig.current.tileSizeDp.times(tile.row)
-                        ).alpha(0.3f).background(color = Color.Black)
+                        modifier = Modifier.coordinatesAbsoluteOffset(
+                            row = tile.row,
+                            col = tile.col
+                        ).size(displayConfig.current.tileSizeDp)
+                            .alpha(0.3f)
+                            .background(color = Color.Black)
                     )
                 }
 
@@ -409,7 +431,7 @@ private fun CityMapUI(
 }
 
 
-private fun Passenger.Mood.color() = when(this) {
+private fun Passenger.Mood.color() = when (this) {
     Passenger.Mood.NEW -> Color.Black
     Passenger.Mood.OK -> Color.Blue
     Passenger.Mood.GETTING_UPSET -> Color(0xFFFFA500) // orange
@@ -427,13 +449,11 @@ private fun PassangerUI(
     val inCar by passenger.car.map {
         it != null
     }.collectAsState(false)
-    val imageScale by animateFloatAsState(
-        targetValue = if (inCar) {
-            1f
-        } else {
-            2f
-        }
-    )
+    val imageScale = if (inCar) {
+        1f
+    } else {
+        2f
+    }
     val pos by passenger.pos.collectAsState()
     Image(
         bitmap = ImageCache.loadResource("passenger.png"),
@@ -441,14 +461,18 @@ private fun PassangerUI(
             color = tintColor
         ),
         contentDescription = "passenger",
-        modifier = Modifier.absoluteOffset(
-            x = (pos.x * displayConfig.current.scale).dp - displayConfig.current.passengerSizeDp,
-            y = (pos.y * displayConfig.current.scale).dp - displayConfig.current.passengerSizeDp
+        modifier = Modifier.positionAbsoluteOffset(
+            pos = if (inCar) {
+                pos + 10f
+            } else {
+                pos
+            },
+            centerConstraint = displayConfig.current.passengerSizeDp.times(imageScale)
         ).scale(
             imageScale
         ),
 
-    )
+        )
 }
 
 @Composable
@@ -457,7 +481,7 @@ private fun NotificationsUI(
 ) {
     val notifications by gameLoop.notifications.collectAsState()
     notifications.forEach { notification ->
-        when(notification) {
+        when (notification) {
             is Notification.MoneyMade -> MoneyChangeNotificationUI(
                 gameLoop = gameLoop,
                 notificationId = notification.id,
@@ -494,9 +518,8 @@ private fun MoneyChangeNotificationUI(
     Card(
         backgroundColor = backgroundColor,
         elevation = 4.dp,
-        modifier = Modifier.absoluteOffset(
-            x = (pos.col * displayConfig.current.scale).dp,
-            y = ( (pos.row + dy.value) * displayConfig.current.scale).dp
+        modifier = Modifier.positionAbsoluteOffset(
+            pos = Pos(pos.x, pos.y + dy.value)
         ).padding(12.dp)
     ) {
         Text(
@@ -521,10 +544,10 @@ private fun CarUI(
     Image(
         bitmap = ImageCache.loadResource("car.png"),
         contentDescription = "car",
-        modifier = Modifier.absoluteOffset(
-            x = (pos.col * displayConfig.current.scale).dp - displayConfig.current.carSizeDp,
-            y = (pos.row * displayConfig.current.scale).dp - displayConfig.current.carSizeDp
-        ).rotate(
+        modifier = Modifier.positionAbsoluteOffset(
+            pos = pos,
+            centerConstraint = displayConfig.current.carSizeDp
+        ).size(displayConfig.current.carSizeDp).rotate(
             rotation
         )
     )
@@ -534,8 +557,7 @@ private fun CarUI(
 private fun TileUI(
     cityMap: CityMap,
     tile: Tile,
-    modifier: Modifier = Modifier,
-    onClickHandler: (Tile) -> Unit
+    modifier: Modifier = Modifier
 ) {
     val content by tile.content.collectAsState()
     Box(

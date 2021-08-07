@@ -89,7 +89,7 @@ class Car(
         get() = _orientation
 
     companion object {
-        val CAR_SIZE = 16
+        val CAR_SIZE = 32
     }
 }
 
