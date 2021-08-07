@@ -10,7 +10,6 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.*
 import java.io.File
 import java.util.concurrent.Executors
-import kotlin.random.Random
 import kotlin.time.Duration
 import kotlin.time.ExperimentalTime
 
@@ -136,8 +135,6 @@ class GameLoop(
         aiScope.cancel()
     }
 
-
-
     private fun start() {
         events.consumeAsFlow().onEach {
             // there is a possibility that we may not want certain events at the same time
@@ -221,13 +218,10 @@ class GameLoop(
             city.map.tiles.findClosest(it.pos.value)
         }
         carTiles.entries.forEach { (tile, cars) ->
-            val freePassengers = passengerTiles[tile]
-            if (freePassengers != null) {
-                freePassengers.forEachIndexed { index, passanger ->
-                    pickUp(
-                        city, passanger, cars.getOrNull(index)
-                    )
-                }
+            passengerTiles[tile]?.forEachIndexed { index, passenger ->
+                pickUp(
+                    city, passenger, cars.getOrNull(index)
+                )
             }
         }
     }

@@ -10,11 +10,13 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
@@ -352,6 +354,10 @@ private fun CityMapUI(
                 PassangerUI(it)
             }
             NotificationsUI(gameLoop)
+            MinimapUI(
+                city = city,
+                modifier = Modifier.align(Alignment.BottomEnd)
+            )
             val scale = displayConfig.current.scale
 
             Box(modifier = Modifier.fillMaxSize().pointerInput(Unit) {
