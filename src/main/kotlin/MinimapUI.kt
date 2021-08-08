@@ -8,7 +8,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.birbit.composecity.data.City
+import com.birbit.composecity.data.CityMap
 import com.birbit.composecity.data.Tile
 import com.birbit.composecity.data.TileContent
 
@@ -16,22 +16,22 @@ private val MINIMAP_SIZE = 4.dp
 
 @Composable
 fun MinimapUI(
-    city: City,
+    cityMap: CityMap,
     modifier: Modifier = Modifier
 ) {
     Box(
         modifier = modifier.width(
-            MINIMAP_SIZE.times(city.map.width)
+            MINIMAP_SIZE.times(cityMap.width)
         ).height(
-            MINIMAP_SIZE.times(city.map.height)
+            MINIMAP_SIZE.times(cityMap.height)
         ).shadow(elevation = 4.dp).border(
             width = 3.dp,
             color = Color.Black
         )
     ) {
-        repeat(city.map.width) { col ->
-            repeat(city.map.height) { row ->
-                val tile = city.map.tiles.get(row = row, col = col)
+        repeat(cityMap.width) { col ->
+            repeat(cityMap.height) { row ->
+                val tile = cityMap.tiles.get(row = row, col = col)
                 MinimapTile(
                     tile = tile,
                     modifier = Modifier.size(MINIMAP_SIZE).absoluteOffset(

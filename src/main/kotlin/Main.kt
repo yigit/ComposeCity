@@ -35,7 +35,7 @@ private class GameController {
                     missedPassengers = 0
                 ),
                 city = City(
-                    map = CityMapImpl(width = 30, height = 20)
+                    map = CityMapImpl(width = 10, height = 10)
                 ),
                 startDuration = Duration.ZERO
             )

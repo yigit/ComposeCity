@@ -30,10 +30,11 @@ private fun <R> randomTile(
     val now = gameLoop.gameTime.now.value
     // expand from the left top, or not??
     val maxRange = 1000//5 + now.inWholeHours.toInt()
+    val map = city.map.value
     repeat(10) {
-        val row = aiRand.nextInt(minOf(maxRange + it, city.map.height))
-        val col = aiRand.nextInt(minOf(maxRange + it, city.map.width))
-        val tile = city.map.tiles.get(row = row, col = col)
+        val row = aiRand.nextInt(minOf(maxRange + it, map.height))
+        val col = aiRand.nextInt(minOf(maxRange + it, map.width))
+        val tile = map.tiles.get(row = row, col = col)
         tryExecutor(tile)?.let {
             return it
         }
@@ -75,6 +76,16 @@ private class AddBusinessEvent: AIEventWithResult<Duration?>() {
     }
 }
 
+private class ExpandCityEvent(
+    val width: Int,
+    val height: Int,
+): Event {
+    override fun apply(gameLoop: GameLoop, city: City) {
+        city.expandTo(width, height)
+    }
+
+}
+
 private class SetPassengerMoodIfNotOnCar(
     private val passengerId: Id,
     private val mood: Passenger.Mood
@@ -99,7 +110,7 @@ private class AddPassengerEvent(
         val businessTiles = city.businessTiles
         if(businessTiles.isEmpty()) return null
         val targetBusiness = businessTiles[aiRand.nextInt(businessTiles.size)]
-        val tile = city.map.tiles.get(
+        val tile = city.map.value.tiles.get(
             row = row,
             col = col
         )
@@ -184,14 +195,28 @@ class CityAILoop(
     internal fun doAILoop(
         citySnapshot: CitySnapshot
     ): Event {
-        val businessEvent = handleBusinessCreation(citySnapshot)
-        val houseEvent = handleHouseCreation(citySnapshot)
-        val passengerEvent = handlePassengerCreation(citySnapshot)
-        val passengerEvents = handlePassengerMoods(citySnapshot)
-        val leavingPassengers = handlePassengerLeave(citySnapshot)
         return CompositeEvent(
-            listOfNotNull(businessEvent, houseEvent, passengerEvent, passengerEvents, leavingPassengers)
+            listOfNotNull(
+                handleBusinessCreation(citySnapshot),
+                handleHouseCreation(citySnapshot),
+                handlePassengerCreation(citySnapshot),
+                handlePassengerMoods(citySnapshot),
+                handlePassengerLeave(citySnapshot),
+                handleCityExpansion(citySnapshot)
+            )
         )
+    }
+
+    private fun handleCityExpansion(citySnapshot: CitySnapshot): Event? {
+        val minWidth = 10 + 5 * citySnapshot.now.inWholeDays
+        val minHeight = 10 + 10 * citySnapshot.now.inWholeDays
+        if (citySnapshot.grid.width < minWidth || citySnapshot.grid.height < minHeight) {
+            return ExpandCityEvent(
+                width = minWidth.toInt(),
+                height = minHeight.toInt()
+            )
+        }
+        return null
     }
 
     private fun handlePassengerCreation(citySnapshot: CitySnapshot): Event? {

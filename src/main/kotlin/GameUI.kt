@@ -41,7 +41,7 @@ import java.util.*
 import kotlin.time.ExperimentalTime
 
 @Stable
-private data class DisplayConfig(
+private data class CameraConfig(
     val scale: Float,
     val tileSizeDp: Dp = (TILE_SIZE * scale).dp,
     val carSizeDp: Dp = (Car.CAR_SIZE * scale).dp,
@@ -54,8 +54,8 @@ fun Modifier.coordinatesAbsoluteOffset(
     row: Int,
     col: Int,
 ) = Modifier.absoluteOffset(
-    x = displayConfig.current.tileSizeDp.times(col),
-    y = displayConfig.current.tileSizeDp.times(row)
+    x = cameraConfig.current.tileSizeDp.times(col),
+    y = cameraConfig.current.tileSizeDp.times(row)
 )
 
 @Composable
@@ -64,8 +64,8 @@ fun Modifier.positionAbsoluteOffset(
     pos: Pos,
     centerConstraint: Dp = Dp.Hairline
 ) = Modifier.absoluteOffset(
-    x = (pos.col * displayConfig.current.scale).dp - centerConstraint.div(2),
-    y = (pos.row * displayConfig.current.scale).dp - centerConstraint.div(2)
+    x = (pos.col * cameraConfig.current.scale).dp - centerConstraint.div(2),
+    y = (pos.row * cameraConfig.current.scale).dp - centerConstraint.div(2)
 )
 
 @OptIn(ExperimentalComposeUiApi::class)
@@ -318,7 +318,7 @@ private fun ControlsUI(
     }
 }
 
-private val displayConfig = compositionLocalOf<DisplayConfig> { error("cannot find display config!") }
+private val cameraConfig = compositionLocalOf<CameraConfig> { error("cannot find display config!") }
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
@@ -328,7 +328,7 @@ private fun CityMapUI(
     controlCallbacks: ControlCallbacks,
     modifier: Modifier
 ) {
-    val cityMap = city.map
+    val cityMap by city.map.collectAsState()
     val currentCars by city.cars.collectAsState()
     val currentFood by city.passengers.collectAsState()
     BoxWithConstraints(
@@ -338,19 +338,20 @@ private fun CityMapUI(
 
         val currentConfig = remember(
             this.constraints,
-            density
+            density,
+            cityMap
         ) {
             val heightPerTile = this.constraints.maxHeight.toFloat() / cityMap.height
             val widthPerTile = this.constraints.maxWidth.toFloat() / cityMap.width
             val scale = minOf(heightPerTile, widthPerTile) / TILE_SIZE / density
-            DisplayConfig(scale)
+            CameraConfig(scale)
         }
         var mouseDragTiles by remember {
             mutableStateOf(emptyList<Tile>())
         }
 
         CompositionLocalProvider(
-            displayConfig provides currentConfig
+            cameraConfig provides currentConfig
         ) {
             repeat(cityMap.height) { row ->
                 repeat(cityMap.width) { col ->
@@ -374,10 +375,10 @@ private fun CityMapUI(
             }
             NotificationsUI(gameLoop)
             MinimapUI(
-                city = city,
+                cityMap = cityMap,
                 modifier = Modifier.align(Alignment.BottomEnd)
             )
-            val scale = displayConfig.current.scale
+            val scale = cameraConfig.current.scale
 
             Box(modifier = Modifier.fillMaxSize().pointerInput(Unit) {
                 coroutineScope {
@@ -419,7 +420,7 @@ private fun CityMapUI(
                         modifier = Modifier.coordinatesAbsoluteOffset(
                             row = tile.row,
                             col = tile.col
-                        ).size(displayConfig.current.tileSizeDp)
+                        ).size(cameraConfig.current.tileSizeDp)
                             .alpha(0.3f)
                             .background(color = Color.Black)
                     )
@@ -467,7 +468,7 @@ private fun PassangerUI(
             } else {
                 pos
             },
-            centerConstraint = displayConfig.current.passengerSizeDp.times(imageScale)
+            centerConstraint = cameraConfig.current.passengerSizeDp.times(imageScale)
         ).scale(
             imageScale
         ),
@@ -546,8 +547,8 @@ private fun CarUI(
         contentDescription = "car",
         modifier = Modifier.positionAbsoluteOffset(
             pos = pos,
-            centerConstraint = displayConfig.current.carSizeDp
-        ).size(displayConfig.current.carSizeDp).rotate(
+            centerConstraint = cameraConfig.current.carSizeDp
+        ).size(cameraConfig.current.carSizeDp).rotate(
             rotation
         )
     )
@@ -561,7 +562,7 @@ private fun TileUI(
 ) {
     val content by tile.content.collectAsState()
     Box(
-        modifier = modifier.size(displayConfig.current.tileSizeDp)
+        modifier = modifier.size(cameraConfig.current.tileSizeDp)
     ) {
         when (content) {
             TileContent.Grass -> Image(
@@ -572,6 +573,7 @@ private fun TileUI(
             TileContent.Business -> Image(
                 bitmap = ImageCache.loadResource("business.png"),
                 contentDescription = "business",
+                modifier = Modifier.fillMaxSize(1f)
             )
             TileContent.Road -> Image(
                 bitmap = getTileBitmap(
@@ -579,17 +581,20 @@ private fun TileUI(
                     tile = tile
                 ),
                 contentDescription = "road",
+                modifier = Modifier.fillMaxSize(1f)
             )
             TileContent.House -> Image(
                 bitmap = ImageCache.loadResource("house.png"),
                 colorFilter = ColorFilter.tint(
                     color = Color.Red,
                 ),
-                contentDescription = "house"
+                contentDescription = "house",
+                modifier = Modifier.fillMaxSize(1f)
             )
             TileContent.TaxiStation -> Image(
                 bitmap = ImageCache.loadResource("taxi-station.png"),
-                contentDescription = "taxi station"
+                contentDescription = "taxi station",
+                modifier = Modifier.fillMaxSize(1f)
             )
         }
     }

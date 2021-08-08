@@ -20,7 +20,8 @@ class CitySnapshot(
     init {
         // this is super inefficient but we don't care, for now...
         // we can make this mutable, track changes in the city and update efficiently, easily.
-        val gridData = city.map.tiles.data.map {
+        val map = city.map.value
+        val gridData = map.tiles.data.map {
             TileSnapshot(
                 tile = it,
                 _passengers = mutableListOf(),
@@ -28,8 +29,8 @@ class CitySnapshot(
             )
         }
         grid = GridImpl(
-            width = city.map.width,
-            height = city.map.height,
+            width = map.width,
+            height = map.height,
             unitSize = CityMap.TILE_SIZE,
             data = gridData
         )

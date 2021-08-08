@@ -60,7 +60,6 @@ interface Grid<T> {
     val data: List<T>
     val unitSize: Float
 
-
     private fun findClosestCoordinates(
         pos: Pos
     ) : Coordinates = Coordinates(
@@ -243,4 +242,27 @@ class GridImpl<T>(
     override val height: Int,
     override val unitSize: Float,
     override val data: List<T>
-) : Grid<T>
+) : Grid<T> {
+    fun copyExpanded(
+        newWidth: Int,
+        newHeight: Int,
+        newItem : (row:Int, col: Int) -> T
+    ): GridImpl<T> {
+        val newData = ArrayList<T>(newWidth * newHeight)
+        repeat(newHeight) { h ->
+            repeat(newWidth) { w ->
+                if (h < height && w < width) {
+                    newData.add(get(row = h, col = w))
+                } else {
+                    newData.add(newItem(h, w))
+                }
+            }
+        }
+        return GridImpl(
+            width = newWidth,
+            height = newHeight,
+            unitSize = unitSize,
+            data = newData
+        )
+    }
+}

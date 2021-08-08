@@ -125,11 +125,12 @@ class LoadSave(
             }.associate {
                 it.id to it.passenger!!.id
             }
+            val map = this.map.value
             return SerializedCity(
                 lastGeneratedId = this.idGenerator.lastId,
-                width = this.map.width,
-                height = this.map.height,
-                tiles = this.map.tiles.data.map {
+                width = map.width,
+                height = map.height,
+                tiles = map.tiles.data.map {
                     it.content.value.id
                 },
                 passengers = this.passengers.value.map {
@@ -195,23 +196,24 @@ class LoadSave(
             val mapData = this.tiles.map {
                 TileContent.fromId(it)
             }
+            val map = CityMapImpl(
+                width = width,
+                height = height,
+                content = mapData
+            )
             val city = City(
-                map = CityMapImpl(
-                    width = width,
-                    height = height,
-                    content = mapData
-                ),
+                map = map,
                 startId = lastGeneratedId
             )
             val passengersById = this.passengers.map {
-                it.toGameObject(city.map.tiles).also {
+                it.toGameObject(map.tiles).also {
                     city.addPassenger(it)
                 }
             }.associateBy {
                 it.id
             }
             val carsById = this.cars.map {
-                it.toGameObject(city.map.tiles).also {
+                it.toGameObject(map.tiles).also {
                     city.addCar(it)
                 }
             }.associateBy {

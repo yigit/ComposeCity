@@ -211,11 +211,12 @@ class GameLoop(
         city: City,
         passengers: List<Passenger>
     ) {
+        val map = city.map.value
         val carTiles = cars.filter { it.passenger == null }.groupBy {
-            city.map.tiles.findClosest(it.pos.value)
+            map.tiles.findClosest(it.pos.value)
         }
         val passengerTiles = passengers.filter { it.car.value == null }.groupBy {
-            city.map.tiles.findClosest(it.pos.value)
+            map.tiles.findClosest(it.pos.value)
         }
         carTiles.entries.forEach { (tile, cars) ->
             passengerTiles[tile]?.forEachIndexed { index, passenger ->

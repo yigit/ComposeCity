@@ -14,12 +14,22 @@ interface MutableCityMap: CityMap {
     val mutableTiles: Grid<MutableTile>
 }
 
-class CityMapImpl(
+class CityMapImpl internal constructor(
     override val width: Int,
     override val height: Int,
-    content: List<TileContent>? = null
+    override val mutableTiles: GridImpl<MutableTile>
 ) : MutableCityMap {
-    override val mutableTiles = buildTiles(width = width, height = height, content)
+
+    constructor(
+        width: Int,
+        height: Int,
+        content: List<TileContent>? = null
+    ) : this(
+        width = width,
+        height = height,
+        mutableTiles = buildTiles(width = width, height = height, content)
+    )
+
     @Suppress("UNCHECKED_CAST")
     override val tiles: Grid<Tile> = mutableTiles as Grid<Tile>
 

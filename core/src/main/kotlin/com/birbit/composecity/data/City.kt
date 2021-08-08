@@ -17,8 +17,9 @@ class City(
     map: CityMapImpl,
     startId: Id = Id(0)
 ) {
-    private val _map = map
-    val map: CityMap = map
+    private val _map = MutableStateFlow(map)
+    val map: StateFlow<CityMap>
+        get() = _map
     internal var businessTiles: List<Tile> = map.tiles.data.filter {
         it.content.value == TileContent.Business
     }
@@ -46,7 +47,7 @@ class City(
     }
 
     fun addBusiness(tile: Tile): Boolean {
-        val mutableTile = _map.mutableTiles.get(row = tile.row, col = tile.col)
+        val mutableTile = _map.value.mutableTiles.get(row = tile.row, col = tile.col)
         if (mutableTile.content.value == TileContent.Grass) {
             mutableTile.content.value = TileContent.Business
             businessTiles = businessTiles + tile
@@ -56,7 +57,7 @@ class City(
     }
 
     fun addHouse(tile: Tile): Boolean {
-        val mutableTile = _map.mutableTiles.get(row = tile.row, col = tile.col)
+        val mutableTile = _map.value.mutableTiles.get(row = tile.row, col = tile.col)
         if (mutableTile.content.value == TileContent.Grass) {
             mutableTile.content.value = TileContent.House
             houseTiles = houseTiles + mutableTile
@@ -85,7 +86,7 @@ class City(
     }
 
     fun toggleTile(gameLoop: GameLoop, player: Player, tile: Tile) {
-        val mutableTile = _map.mutableTiles.get(row = tile.row, col = tile.col)
+        val mutableTile = _map.value.mutableTiles.get(row = tile.row, col = tile.col)
         if (tile.content.value == TileContent.Grass) {
             player.deductMoney(Player.COST_OF_ROAD) {
                 mutableTile.content.value = TileContent.Road
@@ -100,7 +101,7 @@ class City(
         val valid = tiles.filter {
             it.content.value == TileContent.Grass
         }.map {
-            _map.mutableTiles.get(row = it.row, col = it.col)
+            _map.value.mutableTiles.get(row = it.row, col = it.col)
         }
         if (valid.isEmpty()) return
         val cost = valid.size * Player.COST_OF_ROAD
@@ -119,7 +120,7 @@ class City(
 
     fun addTaxiStation(gameLoop: GameLoop, player: Player, tile: Tile) {
         @Suppress("NAME_SHADOWING")
-        val tile = _map.mutableTiles.get(row = tile.row, col = tile.col)
+        val tile = _map.value.mutableTiles.get(row = tile.row, col = tile.col)
         if (tile.content.value != TileContent.Grass) {
             return
         }
@@ -133,5 +134,23 @@ class City(
             addCar(newCar)
             gameLoop.addNotification(Notification.MoneyLost(amount = Player.COST_OF_TAXI_STATION, pos = tile.center))
         }
+    }
+
+    fun expandTo(width: Int, height: Int) {
+        val current = _map.value
+        if (current.width >= width && current.height >= height) {
+            return
+        }
+        val newGrid: GridImpl<MutableTile> = _map.value.mutableTiles.copyExpanded(
+            newWidth = width,
+            newHeight = height
+        ) { row, col ->
+            TileImpl(row = row, col = col)
+        }
+        _map.value = CityMapImpl(
+            width = width,
+            height = height,
+            mutableTiles = newGrid
+        )
     }
 }

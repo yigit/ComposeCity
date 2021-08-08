@@ -59,7 +59,7 @@ class Car(
             val targetPos = path.target(
                 pos = pos.value
             ) ?: return
-            val closestTile = city.map.tiles.findClosest(targetPos)
+            val closestTile = city.map.value.tiles.findClosest(targetPos)
             if (closestTile.content.value != TileContent.Road && closestTile.content.value != TileContent.Business &&
                 closestTile != taxiStation) {
                 targetPath = null
