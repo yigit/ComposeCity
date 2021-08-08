@@ -38,6 +38,8 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import java.util.*
+import kotlin.math.ceil
+import kotlin.math.roundToInt
 import kotlin.time.ExperimentalTime
 
 @Stable
@@ -109,12 +111,25 @@ fun GameUI(gameLoop: GameLoop, onExit: () -> Unit) {
         }
 
         override fun onTileClick(tile: Tile) {
-            if (uiControls.modeValue == Mode.CHANGE_TILE) {
-                gameLoop.addEvent(ToggleTileEvent(tile))
-            } else if (uiControls.modeValue == Mode.ADD_CAR) {
-                gameLoop.addEvent(AddCarToStationEvent(tile))
-            } else if (uiControls.modeValue == Mode.ADD_TAXI_STATION) {
-                gameLoop.addEvent(AddTaxiStationEvent(tile))
+            // well, this may not match what user was seeing but is fine for now
+            when(tile.content.value) {
+                TileContent.Road -> {
+                    if (uiControls.modeValue == Mode.CHANGE_TILE) {
+                        gameLoop.addEvent(ToggleTileEvent(tile))
+                    }
+                }
+                TileContent.TaxiStation -> {
+                    if (uiControls.modeValue == Mode.ADD_CAR) {
+                        gameLoop.addEvent(AddCarToStationEvent(tile))
+                    }
+                }
+                TileContent.Grass -> {
+                    if (uiControls.modeValue == Mode.ADD_TAXI_STATION) {
+                        gameLoop.addEvent(AddTaxiStationEvent(tile))
+                    } else {
+                        gameLoop.addEvent(SetTilesToRoad(listOf(tile)))
+                    }
+                }
             }
         }
 
@@ -215,7 +230,7 @@ private fun ControlsUI(
             enabled = false,
             alwaysShowLabel = true,
             icon = {
-                Text("$money")
+                Text("$$money")
             },
             label = {
                 Text("$deliveredPassengers / $missedPassengers")
@@ -380,7 +395,7 @@ private fun CityMapUI(
             )
             val scale = cameraConfig.current.scale
 
-            Box(modifier = Modifier.fillMaxSize().pointerInput(Unit) {
+            Box(modifier = Modifier.fillMaxSize().pointerInput(scale) {
                 coroutineScope {
                     launch {
                         detectTapGestures {
@@ -554,6 +569,11 @@ private fun CarUI(
     )
 }
 
+@Stable
+private fun Dp.roundUp(): Dp {
+    return ceil(this.value).dp
+}
+
 @Composable
 private fun TileUI(
     cityMap: CityMap,
@@ -562,7 +582,7 @@ private fun TileUI(
 ) {
     val content by tile.content.collectAsState()
     Box(
-        modifier = modifier.size(cameraConfig.current.tileSizeDp)
+        modifier = modifier.size(cameraConfig.current.tileSizeDp.roundUp())
     ) {
         when (content) {
             TileContent.Grass -> Image(

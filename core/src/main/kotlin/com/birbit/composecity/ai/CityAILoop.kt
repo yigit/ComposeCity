@@ -208,8 +208,8 @@ class CityAILoop(
     }
 
     private fun handleCityExpansion(citySnapshot: CitySnapshot): Event? {
-        val minWidth = 10 + 5 * citySnapshot.now.inWholeDays
-        val minHeight = 10 + 10 * citySnapshot.now.inWholeDays
+        val minWidth = 16 + 8 * citySnapshot.now.inWholeDays
+        val minHeight = 8 + 4 * citySnapshot.now.inWholeDays
         if (citySnapshot.grid.width < minWidth || citySnapshot.grid.height < minHeight) {
             return ExpandCityEvent(
                 width = minWidth.toInt(),
